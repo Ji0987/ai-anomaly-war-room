@@ -1,0 +1,14 @@
+# 貢獻矩陣(Contribution Matrix)
+
+> 對應評分項 3(20 分)。每人自行維護自己那一列,連結指向 GitHub 實際紀錄。
+> 展示日每人講解自己負責功能的 15-20 秒。
+
+| 成員 | 工作包 | 功能 | Issues | Branch | 主要 Commits | PRs | Reviewed(審誰的 PR) |
+|------|--------|------|--------|--------|--------------|-----|------------------------|
+| (姓名) | A | 導覽/路由/90 秒導覽 | | `feature/replay-shell` | | | E 的 PR |
+| (姓名) | B | 數位孿生告警 | | `feature/twin-alert` | | | A 的 PR |
+| (姓名) | C | 六格診斷卡 | | `feature/diagnosis-cards` | | | B 的 PR |
+| (姓名) | D | 決策與損失 slider | | `feature/decision-loss` | | | C 的 PR |
+| (姓名) | E | 響應式/防呆/離線建置 | | `feature/responsive-offline` | | | D 的 PR |
+
+> 注意:此檔為課程繳交用;**競賽送審版文件不得含姓名**(匿名規範),送審前另出無名版。

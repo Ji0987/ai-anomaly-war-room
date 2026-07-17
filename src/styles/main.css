@@ -1,0 +1,102 @@
+/* 工作包 E 起點:responsive-offline。設計 token 統一在 :root,四頁共用同一套元件樣式 */
+:root {
+  --bg: #0f1420;
+  --panel: #1a2233;
+  --text: #e8ecf4;
+  --muted: #93a0b4;
+  --normal: #34c77b;
+  --warning: #f5b942;
+  --critical: #ef5350;
+  --resolved: #4f8ef7;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+body {
+  font-family: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  background: var(--panel);
+}
+
+#brand { font-weight: 700; }
+#event-badge { color: var(--muted); font-size: 0.85rem; }
+
+#nav { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.nav-btn, #replay-controls button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.nav-btn.active { border-color: var(--resolved); color: var(--resolved); }
+#replay-controls { margin-left: auto; display: flex; gap: 0.4rem; }
+
+#app { flex: 1; padding: 1rem; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+.stage h1 { font-size: 1.4rem; margin-bottom: 0.3rem; }
+.meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
+.kpi {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 0.8rem;
+  text-align: center;
+  border-left: 4px solid var(--normal);
+}
+.kpi.warn { border-left-color: var(--warning); }
+.kpi-value { display: block; font-size: 1.5rem; font-weight: 700; }
+.kpi-label { color: var(--muted); font-size: 0.8rem; }
+
+.twin, .edge-card, .truth-card, .whatif {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.diagnosis-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.diagnosis-card .cell { background: var(--panel); border-radius: var(--radius); padding: 0.8rem; }
+.diagnosis-card h3 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+.diagnosis-card ul { padding-left: 1.1rem; }
+
+.governance { color: var(--warning); font-size: 0.9rem; }
+.note { color: var(--muted); font-size: 0.8rem; }
+
+.whatif input[type='range'] { width: 100%; margin: 0.6rem 0; }
+
+#statusbar {
+  padding: 0.4rem 1rem;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  #replay-controls { margin-left: 0; width: 100%; }
+  .stage h1 { font-size: 1.15rem; }
+}

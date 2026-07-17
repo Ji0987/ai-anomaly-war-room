@@ -1,0 +1,50 @@
+{
+  "eventId": "EVT-001",
+  "line": "二號產線",
+  "station": "三號機台",
+  "summary": "換料後模具溫度漂移導致良率下降",
+  "stages": [
+    {
+      "id": "baseline",
+      "label": "正常基線|全域感知",
+      "time": "T-10",
+      "yield": 98.0,
+      "status": "normal",
+      "signals": { "temperature_c": 62.1, "vibration_rms": 0.31, "current_a": 3.9 }
+    },
+    {
+      "id": "sensing",
+      "label": "異常事件|邊緣告警",
+      "time": "T+8",
+      "yield": 94.5,
+      "status": "warning",
+      "signals": { "temperature_c": 71.4, "vibration_rms": 0.42, "current_a": 4.6 },
+      "edge": { "deviceId": "EDGE-03", "score": 0.78, "threshold": 0.6, "source": "raw_sensor(模擬)" }
+    },
+    {
+      "id": "diagnosis",
+      "label": "現場知識診斷|AI 老師傅卡",
+      "time": "T+20",
+      "yield": 91.0,
+      "status": "critical",
+      "card": {
+        "rootCause": "換料後模具溫控參數未同步",
+        "confidence": 82,
+        "evidence": ["模具溫度 +9.3°C 且持續上升", "換料事件後 2 小時內缺陷率上升", "電流均值同步偏高"],
+        "knowledge": "設備 SOP v3.2/歷史事件 #018",
+        "action": "降載→校驗溫控參數→比對原料批號→確認後復機",
+        "reviewStatus": "待人工確認",
+        "source": "diagnosis(Dify 預生成)"
+      }
+    },
+    {
+      "id": "decision",
+      "label": "根因閉環|證據、處置與止損",
+      "time": "T+30",
+      "yield": 91.0,
+      "status": "resolved",
+      "truth": "換料 SOP 漏執行溫控同步步驟(預埋根因)",
+      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0.07, "costPerDefect": 25, "source": "loss(what-if 假設模型)" }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run build:offline
+      - name: 機密字串掃描
+        run: |
+          ! grep -rEn "(api[_-]?key|password|secret|token)\s*[:=]\s*['\"][A-Za-z0-9_-]{16,}" src/ || (echo "疑似機密字串,請檢查" && exit 1)

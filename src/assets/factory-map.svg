@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" role="img" aria-label="產線示意圖">
+  <!-- 工作包 B:以 Figma 重繪後匯出取代此占位圖;站點 id 保持不變,狀態顏色由程式依 stage 資料驅動 -->
+  <style>.st{fill:#1a2233;stroke:#93a0b4}.lbl{fill:#e8ecf4;font:14px sans-serif;text-anchor:middle}.dot{fill:#34c77b}</style>
+  <rect x="10" y="80" width="140" height="60" rx="8" class="st"/><text x="80" y="115" class="lbl">原料/換料</text><circle id="dot-feed" cx="80" cy="70" r="8" class="dot"/>
+  <line x1="150" y1="110" x2="220" y2="110" stroke="#93a0b4"/>
+  <rect x="220" y="80" width="140" height="60" rx="8" class="st"/><text x="290" y="115" class="lbl">三號機台</text><circle id="dot-machine" cx="290" cy="70" r="8" class="dot"/>
+  <line x1="360" y1="110" x2="430" y2="110" stroke="#93a0b4"/>
+  <rect x="430" y="80" width="140" height="60" rx="8" class="st"/><text x="500" y="115" class="lbl">品質檢測</text><circle id="dot-qc" cx="500" cy="70" r="8" class="dot"/>
+  <line x1="570" y1="110" x2="640" y2="110" stroke="#93a0b4"/>
+  <rect x="640" y="80" width="140" height="60" rx="8" class="st"/><text x="710" y="115" class="lbl">包裝</text><circle id="dot-pack" cx="710" cy="70" r="8" class="dot"/>
+</svg>
