@@ -11,7 +11,7 @@ feature/<工作包> → dev → main → GitHub Pages
 1. 先開 Issue(標題含 REQ 編號),再從**最新的 dev** 建分支。
 2. commit 訊息:說明「做了什麼」,例如 `新增診斷卡信心度顯示 (REQ-03)`。
 3. PR 用模板,附:需求編號、驗收條件、畫面截圖、測試結果。
-4. **環狀互審**:A 審 E、B 審 A、C 審 B、D 審 C、E 審 D。
+4. **環狀互審**(4 人):A 審 D、B 審 A、C 審 B、D 審 C。
 5. 採 merge commit(保留分支歷史),不 squash。
 6. `main`、`dev` 禁止直接 push。
 7. 每週由**不同成員**建立一次 `dev → main` 發布 PR。

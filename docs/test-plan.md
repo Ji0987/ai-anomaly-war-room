@@ -11,8 +11,9 @@
 | TC-03a | 診斷卡完整性 | 進第 3 頁 | 六格齊全、證據 ≥3 條 | C |
 | TC-04a | slider 邊界 | 拉到 0 與 30 | 損失 = 0 / 公式上限值,無 NaN | D |
 | TC-04b | 損失公式 | slider = 10 | 顯示值 = 10×40×0.07×25 = NT$700 | D |
-| TC-05a | 手機尺寸 | DevTools 390×844 走完四頁 | 全部可操作、無橫向捲動 | E |
-| TC-06a | 離線單檔 | 飛航模式 file:// 開 dist-offline | 完整展示流程可跑 | E |
-| TC-06b | 無外部請求 | DevTools Network 全程錄製 | 0 個 runtime 外部請求 | E |
-| TC-07a | 缺資料防呆 | 移除情境 JSON 一個欄位後載入 | 顯示提示文字,不白屏 | E |
+| TC-05a | 手機尺寸 | DevTools 390×844 走完四頁 | 全部可操作、無橫向捲動 | B |
+| TC-06a | 離線單檔 | 飛航模式 file:// 開 dist-offline | 完整展示流程可跑 | A |
+| TC-06b | 無外部請求 | DevTools Network 全程錄製 | 0 個 runtime 外部請求 | A |
+| TC-07a | 缺資料防呆 | 移除情境 JSON 一個欄位後載入 | 顯示提示文字,不白屏 | C |
 | TC-08a | 機密掃描 | 全 repo grep key/token/password | 無任何機密字串 | 全員輪值 |
+| TC-09a | 展示前總驗收 | 展示前依序跑完 TC-01~08 全表 | 全數通過,結果已寫入 test-results.md | D |

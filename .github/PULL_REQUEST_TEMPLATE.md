@@ -23,4 +23,4 @@ REQ-xx(對應 docs/requirements.md)
 
 ## Reviewer
 
-@<!-- 環狀互審:A審E、B審A、C審B、D審C、E審D -->
+@<!-- 環狀互審(4人):A審D、B審A、C審B、D審C -->
