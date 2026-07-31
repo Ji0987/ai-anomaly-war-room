@@ -4,6 +4,8 @@
 
 > 模擬資料|離線事件回放|不含即時控制
 
+**第一次看這個 repo?先讀 [docs/kickoff-summary.md](docs/kickoff-summary.md)。**
+
 ## 快速開始
 
 ```bash
