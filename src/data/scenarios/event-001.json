@@ -1,8 +1,11 @@
 {
   "eventId": "EVT-001",
+  "scenarioType": "confirmed_anomaly",
+  "scenarioLabel": "確診異常",
   "line": "二號產線",
   "station": "三號機台",
   "summary": "換料後模具溫度漂移導致良率下降",
+  "materialChangeEvent": { "time": "T+0", "description": "原料批號 LOT-2603 換料" },
   "stages": [
     {
       "id": "baseline",
@@ -10,7 +13,7 @@
       "time": "T-10",
       "yield": 98.0,
       "status": "normal",
-      "signals": { "temperature_c": 62.1, "vibration_rms": 0.31, "current_a": 3.9 }
+      "signals": { "temperature_c": 62.1, "vibration_rms": 0.31, "current_a": 3.9, "source": "raw_sensor(模擬)" }
     },
     {
       "id": "sensing",
@@ -18,8 +21,60 @@
       "time": "T+8",
       "yield": 94.5,
       "status": "warning",
-      "signals": { "temperature_c": 71.4, "vibration_rms": 0.42, "current_a": 4.6 },
-      "edge": { "deviceId": "EDGE-03", "score": 0.78, "threshold": 0.6, "source": "raw_sensor(模擬)" }
+      "signals": { "temperature_c": 71.4, "vibration_rms": 0.42, "current_a": 4.6, "source": "raw_sensor(模擬)" },
+      "edge": {
+        "deviceId": "EDGE-03",
+        "score": 0.78,
+        "threshold": 0.6,
+        "windowSeconds": 300,
+        "hysteresisSeconds": 60,
+        "suppressed": false,
+        "suppressionRule": "同裝置同分數 60 秒內不重複派發告警,避免抖動誤報",
+        "trend": [
+          { "time": "T+2", "temperature_c": 64.8 },
+          { "time": "T+5", "temperature_c": 68.0 },
+          { "time": "T+8", "temperature_c": 71.4 }
+        ],
+        "ruleHits": [
+          {
+            "signal": "temperature_c",
+            "label": "模具溫度",
+            "weight": 0.5,
+            "observed": 71.4,
+            "baseline": 62.1,
+            "ruleThreshold": 70.0,
+            "triggered": true,
+            "note": "超過警戒值 70°C,且 T+2→T+8 持續上升"
+          },
+          {
+            "signal": "current_a",
+            "label": "電流",
+            "weight": 0.3,
+            "observed": 4.6,
+            "baseline": 3.9,
+            "ruleThreshold": 4.4,
+            "triggered": true,
+            "note": "超過額定電流 +0.4A,與溫度同步偏高"
+          },
+          {
+            "signal": "vibration_rms",
+            "label": "振動",
+            "weight": 0.2,
+            "observed": 0.42,
+            "baseline": 0.31,
+            "ruleThreshold": 0.45,
+            "triggered": false,
+            "note": "尚未超過振動門檻,僅供輔助判斷,不計入本次觸發"
+          }
+        ],
+        "scoring": {
+          "method": "score = Σ(已觸發規則權重) × 感測器品質係數,四捨五入至小數點後 2 位",
+          "sensorQuality": 0.975,
+          "sensorQualityNote": "振動感測器逾 30 天未校正,信心係數打折",
+          "rawTriggeredWeightSum": 0.8
+        },
+        "source": "edge(規則評分)"
+      }
     },
     {
       "id": "diagnosis",
@@ -28,12 +83,20 @@
       "yield": 91.0,
       "status": "critical",
       "card": {
+        "verdict": "anomaly_confirmed",
         "rootCause": "換料後模具溫控參數未同步",
         "confidence": 82,
-        "evidence": ["模具溫度 +9.3°C 且持續上升", "換料事件後 2 小時內缺陷率上升", "電流均值同步偏高"],
-        "knowledge": "設備 SOP v3.2/歷史事件 #018",
+        "confidenceBasis": "與歷史事件 #018 徵候相符(同機台、同批料號類型);僅有離散快照而非連續時序,信心值保守估計,非模型自信原始輸出",
+        "evidence": [
+          { "time": "T+8", "description": "模具溫度較基線 +9.3°C(62.1°C→71.4°C),且 T+2→T+8 持續上升", "metric": "temperature_c", "value": 71.4 },
+          { "time": "T+20", "description": "換料事件(T+0)後 20 分鐘內缺陷率由 2% 上升至 9%", "metric": "defect_rate_pct", "value": 9 },
+          { "time": "T+8", "description": "電流均值同步偏高,較基線 +0.7A", "metric": "current_a", "value": 4.6 }
+        ],
+        "knowledge": "設備 SOP v3.2 §4.2 換料後溫控校驗程序/歷史事件 #018(同機台、同批料號徵候相符)",
         "action": "降載→校驗溫控參數→比對原料批號→確認後復機",
-        "reviewStatus": "待人工確認",
+        "contentReview": { "status": "approved", "reviewer": "工作包 C 負責人", "reviewedAt": "2026-08-01T09:40:00+08:00" },
+        "caseDisposition": { "status": "pending", "actor": "", "actedAt": "", "note": "待值班人員現場確認是否採納建議處置" },
+        "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
         "source": "diagnosis(Dify 預生成)"
       }
     },
@@ -44,7 +107,14 @@
       "yield": 91.0,
       "status": "resolved",
       "truth": "換料 SOP 漏執行溫控同步步驟(預埋根因)",
-      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0.07, "costPerDefect": 25, "source": "loss(what-if 假設模型)" }
+      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0.07, "costPerDefect": 25, "source": "loss(what-if 假設模型)" },
+      "recovery": {
+        "status": "pending_recheck",
+        "targetYieldPct": 97,
+        "observedYieldAtCheckPct": null,
+        "checkWindowMinutes": 30,
+        "reopenCondition": "復機後 30 分鐘內良率未回升至 97% 以上,自動重開案並通知複判"
+      }
     }
   ]
 }

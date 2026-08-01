@@ -1,0 +1,120 @@
+{
+  "eventId": "EVT-004",
+  "scenarioType": "suspected_false_positive",
+  "scenarioLabel": "疑似誤報",
+  "line": "二號產線",
+  "station": "三號機台",
+  "summary": "邊緣評分壓線超標,人工複判後排除異常",
+  "materialChangeEvent": { "time": "T+0", "description": "原料批號 LOT-2605 換料" },
+  "stages": [
+    {
+      "id": "baseline",
+      "label": "正常基線|全域感知",
+      "time": "T-10",
+      "yield": 97.8,
+      "status": "normal",
+      "signals": { "temperature_c": 62.0, "vibration_rms": 0.30, "current_a": 3.9, "source": "raw_sensor(模擬)" }
+    },
+    {
+      "id": "sensing",
+      "label": "異常事件|邊緣告警(壓線)",
+      "time": "T+8",
+      "yield": 97.0,
+      "status": "warning",
+      "signals": { "temperature_c": 70.8, "vibration_rms": 0.46, "current_a": 4.1, "source": "raw_sensor(模擬)" },
+      "edge": {
+        "deviceId": "EDGE-03",
+        "score": 0.63,
+        "threshold": 0.6,
+        "windowSeconds": 300,
+        "hysteresisSeconds": 60,
+        "suppressed": false,
+        "suppressionRule": "同裝置同分數 60 秒內不重複派發告警,避免抖動誤報",
+        "trend": [
+          { "time": "T+2", "temperature_c": 68.5 },
+          { "time": "T+5", "temperature_c": 69.5 },
+          { "time": "T+8", "temperature_c": 70.8 }
+        ],
+        "ruleHits": [
+          {
+            "signal": "temperature_c",
+            "label": "模具溫度",
+            "weight": 0.5,
+            "observed": 70.8,
+            "baseline": 62.0,
+            "ruleThreshold": 70.0,
+            "triggered": true,
+            "note": "壓線超過警戒值 70°C,但 T+2→T+8 升幅平緩,非持續陡升"
+          },
+          {
+            "signal": "current_a",
+            "label": "電流",
+            "weight": 0.3,
+            "observed": 4.1,
+            "baseline": 3.9,
+            "ruleThreshold": 4.4,
+            "triggered": false,
+            "note": "電流維持正常範圍,未如真實異常案例同步偏高"
+          },
+          {
+            "signal": "vibration_rms",
+            "label": "振動",
+            "weight": 0.2,
+            "observed": 0.46,
+            "baseline": 0.30,
+            "ruleThreshold": 0.45,
+            "triggered": true,
+            "note": "振動逼近門檻,該機台感測器上月維修後校正誤差偏高,已知問題單 #041"
+          }
+        ],
+        "scoring": {
+          "method": "score = Σ(已觸發規則權重) × 感測器品質係數,四捨五入至小數點後 2 位",
+          "sensorQuality": 0.9,
+          "sensorQualityNote": "振動感測器已知安裝校正誤差(問題單 #041),信心係數下修",
+          "rawTriggeredWeightSum": 0.7
+        },
+        "source": "edge(規則評分)"
+      }
+    },
+    {
+      "id": "diagnosis",
+      "label": "現場知識診斷|AI 老師傅卡",
+      "time": "T+20",
+      "yield": 96.5,
+      "status": "warning",
+      "card": {
+        "verdict": "suspected_false_positive",
+        "rootCause": "疑似誤報:溫度壓線觸發疊加已知振動感測器校正誤差,現場複判後未觀察到實際製程異常",
+        "confidence": 40,
+        "confidenceBasis": "規則命中但缺乏電流訊號佐證(對照 EVT-001 真實異常案例電流同步偏高,本次未同步),信心值刻意壓低以促人工複判",
+        "evidence": [
+          { "time": "T+8", "description": "溫度 70.8°C 壓線超過警戒值 70.0°C,但 T+2→T+8 升幅平緩,非持續陡升", "metric": "temperature_c", "value": 70.8 },
+          { "time": "T+8", "description": "電流 4.1A 維持正常範圍,未如真實異常案例同步偏高", "metric": "current_a", "value": 4.1 },
+          { "time": "T+20", "description": "良率僅短暫降至 97.0% 後回升至 96.5%~97.8% 區間,未持續惡化", "metric": "yield_pct", "value": 96.5 }
+        ],
+        "knowledge": "設備 SOP v3.2 §4.3 疑似誤報複判流程/振動感測器已知問題單 #041",
+        "action": "現場人工複判→確認製程外觀正常→標記為誤報結案,追蹤問題單 #041 感測器校正",
+        "contentReview": { "status": "approved", "reviewer": "工作包 C 負責人", "reviewedAt": "2026-08-01T09:55:00+08:00" },
+        "caseDisposition": { "status": "returned_for_review", "actor": "值班人員", "actedAt": "2026-08-01T10:00:00+08:00", "note": "現場複判無異常外觀,退回 AI 建議,標記誤報" },
+        "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
+        "source": "diagnosis(Dify 預生成)"
+      }
+    },
+    {
+      "id": "decision",
+      "label": "根因閉環|證據、處置與止損",
+      "time": "T+30",
+      "yield": 97.6,
+      "status": "resolved",
+      "truth": "複判確認為誤報:振動感測器校正誤差(問題單 #041)疊加溫度壓線觸發,非實際製程異常",
+      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0, "costPerDefect": 25, "source": "loss(what-if 假設模型)" },
+      "recovery": {
+        "status": "verified",
+        "targetYieldPct": 97,
+        "observedYieldAtCheckPct": 97.6,
+        "checkWindowMinutes": 30,
+        "reopenCondition": "若振動訊號再次逼近門檻且電流同步異常,重新開案"
+      }
+    }
+  ]
+}

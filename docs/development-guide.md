@@ -19,9 +19,12 @@ feature/<工作包> → dev → main → GitHub Pages
 ## 程式風格
 
 - Vanilla TypeScript,不引入框架(範圍控制)。
-- 一頁一檔(`src/pages/`),共用邏輯放 `src/app/`。
+- 一頁一檔(`src/pages/`),共用邏輯放 `src/app/`,跨頁 UI 元件放 `src/components/`。
 - 顏色/圓角等設計 token 一律用 `src/styles/main.css` 的 CSS 變數(評分項 4:一致性)。
-- 頁面資料一律來自情境 JSON,不在頁面內寫死數值。
+- 頁面資料一律來自情境 JSON,不在頁面內寫死數值;新增/修改欄位要同步更新 `src/app/schema.ts`
+  的型別與型別守衛,頁面一律用 `stageOrNull(id, guard)` 取值,不直接假設 JSON 形狀正確。
+- 拼進 `innerHTML` 的資料一律先過 `src/app/html.ts` 的 `escapeHtml`,情境資料未來可能換成外部
+  來源,不能預設內容一定安全。
 
 ## AI 協作規範
 

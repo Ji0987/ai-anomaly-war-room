@@ -13,7 +13,7 @@ export function isPlaying(): boolean {
 export function play(onTick?: () => void): void {
   stop()
   const advance = () => {
-    const idx = STAGE_IDS.indexOf(currentStageId())
+    const idx = (STAGE_IDS as readonly string[]).indexOf(currentStageId())
     if (idx >= STAGE_IDS.length - 1) {
       stop()
       onTick?.()
@@ -26,7 +26,7 @@ export function play(onTick?: () => void): void {
   const schedule = (idx: number) => {
     timer = window.setTimeout(advance, STAGE_SECONDS[idx] * 1000)
   }
-  schedule(STAGE_IDS.indexOf(currentStageId()))
+  schedule((STAGE_IDS as readonly string[]).indexOf(currentStageId()))
   onTick?.()
 }
 

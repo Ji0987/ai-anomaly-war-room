@@ -27,6 +27,9 @@ npm run build:offline  # 單檔 dist-offline/index.html,可離線雙擊開啟(�
 
 > 4 人組不設第 5 個「只做測試/響應式」的角色;每人主功能 + 一項跨頁職責,理由見各 Issue。
 
+topbar 右側「情境」下拉可切換 4 種內建情境(確診異常/正常巡檢/感測缺值/疑似誤報),
+不是只有一個戲劇化的成功案例,見 [docs/data-model.md](docs/data-model.md#情境庫不是只有一個戲劇化的成功案例)。
+
 ## 協作規範(對應課程評分表)
 
 - 分支流程:`feature/* → dev → main`;`main`/`dev` 禁止直接 push

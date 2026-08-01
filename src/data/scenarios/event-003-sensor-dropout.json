@@ -1,0 +1,120 @@
+{
+  "eventId": "EVT-003",
+  "scenarioType": "sensor_dropout",
+  "scenarioLabel": "感測缺值",
+  "line": "二號產線",
+  "station": "三號機台",
+  "summary": "邊緣裝置回傳異常:電流訊號中斷,無法完整判讀",
+  "materialChangeEvent": { "time": "T+0", "description": "原料批號 LOT-2604 換料" },
+  "stages": [
+    {
+      "id": "baseline",
+      "label": "正常基線|全域感知",
+      "time": "T-10",
+      "yield": 98.0,
+      "status": "normal",
+      "signals": { "temperature_c": 61.5, "vibration_rms": 0.30, "current_a": 3.85, "source": "raw_sensor(模擬)" }
+    },
+    {
+      "id": "sensing",
+      "label": "異常事件|邊緣告警(資料不完整)",
+      "time": "T+8",
+      "yield": 95.0,
+      "status": "warning",
+      "signals": { "temperature_c": 69.0, "vibration_rms": 0.40, "source": "raw_sensor(模擬)" },
+      "edge": {
+        "deviceId": "EDGE-03",
+        "score": 0.5,
+        "threshold": 0.6,
+        "windowSeconds": 300,
+        "hysteresisSeconds": 60,
+        "suppressed": false,
+        "suppressionRule": "同裝置同分數 60 秒內不重複派發告警,避免抖動誤報",
+        "trend": [
+          { "time": "T+2", "temperature_c": 63.8 },
+          { "time": "T+5", "temperature_c": 66.5 },
+          { "time": "T+8", "temperature_c": 69.0 }
+        ],
+        "ruleHits": [
+          {
+            "signal": "temperature_c",
+            "label": "模具溫度",
+            "weight": 0.5,
+            "observed": 69.0,
+            "baseline": 61.5,
+            "ruleThreshold": 70.0,
+            "triggered": false,
+            "note": "接近但未超過警戒值,單獨不足以觸發告警"
+          },
+          {
+            "signal": "current_a",
+            "label": "電流",
+            "weight": 0.3,
+            "observed": 0,
+            "baseline": 3.85,
+            "ruleThreshold": 4.4,
+            "triggered": false,
+            "note": "EDGE-03 自 T+8 起無電流回傳,規則無法評分,以未觸發處理並標記資料缺漏"
+          },
+          {
+            "signal": "vibration_rms",
+            "label": "振動",
+            "weight": 0.2,
+            "observed": 0.40,
+            "baseline": 0.30,
+            "ruleThreshold": 0.45,
+            "triggered": false,
+            "note": "尚未超過振動門檻"
+          }
+        ],
+        "scoring": {
+          "method": "score = Σ(已觸發規則權重) × 感測器品質係數,四捨五入至小數點後 2 位;電流訊號缺漏時額外標記本次評分不完整",
+          "sensorQuality": 0.6,
+          "sensorQualityNote": "電流感測器離線,信心係數大幅下修,分數僅供參考",
+          "rawTriggeredWeightSum": 0.0
+        },
+        "source": "edge(規則評分,資料不完整)"
+      }
+    },
+    {
+      "id": "diagnosis",
+      "label": "現場知識診斷|AI 老師傅卡",
+      "time": "T+20",
+      "yield": 93.5,
+      "status": "critical",
+      "card": {
+        "verdict": "insufficient_data",
+        "rootCause": "疑似模具溫度異常,但電流訊號自 T+8 起中斷,無法交叉比對確認",
+        "confidence": 55,
+        "confidenceBasis": "電流感測器離線導致關鍵佐證缺失,信心值因證據不完整而下修,建議人工現場覆核",
+        "evidence": [
+          { "time": "T+8", "description": "模具溫度 69.0°C,較基線 +7.5°C,呈上升趨勢", "metric": "temperature_c", "value": 69.0 },
+          { "time": "T+8", "description": "電流訊號自 T+8 起中斷,EDGE-03 回報感測器離線", "metric": "current_a", "value": 0 },
+          { "time": "T+20", "description": "良率由 98.0% 降至 93.5%,惟無法排除感測器故障間接影響製程判讀", "metric": "yield_pct", "value": 93.5 }
+        ],
+        "knowledge": "設備 SOP v3.2 §5.1 感測器離線處置流程",
+        "action": "派工檢查 EDGE-03 電流感測器接線→修復前以人工量測電流為主",
+        "contentReview": { "status": "pending", "reviewer": "", "reviewedAt": "" },
+        "caseDisposition": { "status": "returned_for_review", "actor": "值班人員", "actedAt": "2026-08-01T09:50:00+08:00", "note": "證據不完整,退回要求現場人工覆核後再確認處置" },
+        "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
+        "source": "diagnosis(Dify 預生成)"
+      }
+    },
+    {
+      "id": "decision",
+      "label": "根因閉環|證據、處置與止損",
+      "time": "T+30",
+      "yield": 93.5,
+      "status": "critical",
+      "truth": "根因待覆核:電流感測器於 T+8 起離線,現有資料不足以排除感測器故障可能性",
+      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0.045, "costPerDefect": 25, "source": "loss(what-if 假設模型)" },
+      "recovery": {
+        "status": "reopened",
+        "targetYieldPct": 97,
+        "observedYieldAtCheckPct": 93.5,
+        "checkWindowMinutes": 30,
+        "reopenCondition": "感測器修復並回補資料前,本案維持重開狀態,不得標記已處置"
+      }
+    }
+  ]
+}
