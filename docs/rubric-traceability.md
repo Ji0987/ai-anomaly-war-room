@@ -6,7 +6,7 @@
 |---|--------|------|--------------|
 | 1 | 專案文件完整度 | 15 | docs/ 全套:requirements、architecture、data-model、development-guide、test-plan(內容需依專題持續更新,非 AI 原樣) |
 | 2 | 需求符合度與驗收標準 | 15 | requirements.md 痛點/使用者/REQ 表 + acceptance-criteria.md AC 表 |
-| 3 | 每位組員的實作與 Git 協作紀錄 | 20 | contribution-matrix.md(每人 Issue/branch/commit/PR/review 連結);feature→dev→main 流程 |
+| 3 | 每位組員的實作與 Git 協作紀錄 | 20 | contribution-matrix.md(每人 Issue/branch/commit/PR 連結);feature→dev→main 流程。2026-08-01 起 PR 審查改 Codex 自動審查,不再有人工互審連結——這部分證據改由 Issue 討論串、PR 描述(需用自己的話說明)與 commit 紀錄承擔,展示日仍要能親口講解自己的部分 |
 | 4 | 頁面設計與操作一致性 | 10 | styles/main.css 設計 token;四頁共用元件樣式與導覽 |
 | 5 | 功能完整度 | 20 | 四頁 + 90 秒導覽 + slider 核心流程可完整操作 |
 | 6 | 功能測試列表與檢核結果 | 10 | test-plan.md + test-results.md(TC 對齊 AC) |

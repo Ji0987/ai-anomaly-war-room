@@ -31,7 +31,8 @@ npm run build:offline  # 單檔 dist-offline/index.html,可離線雙擊開啟(�
 
 - 分支流程:`feature/* → dev → main`;`main`/`dev` 禁止直接 push
 - 每個功能先開 Issue,再從最新 `dev` 建分支;PR 附需求編號、驗收條件、畫面、測試結果
-- 環狀互審(4 人):A 審 D、B 審 A、C 審 B、D 審 C
+- PR 審查:由 Codex 自動審查(2026-08-01 起取代人工環狀互審),見
+  [docs/development-guide.md](docs/development-guide.md)
 - 文件追蹤編號:`REQ-xx → AC-xx → TC-xx → PR #xx`,見 [docs/rubric-traceability.md](docs/rubric-traceability.md)
 - 每人的貢獻連結彙整於 [docs/contribution-matrix.md](docs/contribution-matrix.md)
 - 機密不進 Git:見 [SECURITY.md](SECURITY.md)

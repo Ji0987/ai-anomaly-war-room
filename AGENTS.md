@@ -19,14 +19,16 @@ Repo:https://github.com/Ji0987/ai-anomaly-war-room
 技術:Vite + Vanilla TypeScript,指令見 `package.json`。
 流程:`feature/* → dev → main`,所有功能 PR 的 base 都是 `dev`。
 
-| GitHub 帳號 | 工作包 | Branch | Issue | 主要責任 | PR reviewer |
-|---|---|---|---|---|---|
-| jes1129 | A | `feature/replay-shell` | [#1](https://github.com/Ji0987/ai-anomaly-war-room/issues/1) | 導覽、90 秒導覽、離線建置與部署 | Ji0987 |
-| Ji0987 | B | `feature/twin-alert` | [#2](https://github.com/Ji0987/ai-anomaly-war-room/issues/2) | 數位孿生告警(SVG)、響應式 | M1430714 |
-| M1430714 | C | `feature/diagnosis-cards` | [#3](https://github.com/Ji0987/ai-anomaly-war-room/issues/3) | 六格診斷卡、空資料防呆 | TSENG115 |
-| TSENG115 | D | `feature/decision-loss` | [#4](https://github.com/Ji0987/ai-anomaly-war-room/issues/4) | 決策/損失 slider、測試彙整 | jes1129 |
+| GitHub 帳號 | 工作包 | Branch | Issue | 主要責任 |
+|---|---|---|---|---|
+| jes1129 | A | `feature/replay-shell` | [#1](https://github.com/Ji0987/ai-anomaly-war-room/issues/1) | 導覽、90 秒導覽、離線建置與部署 |
+| Ji0987 | B | `feature/twin-alert` | [#2](https://github.com/Ji0987/ai-anomaly-war-room/issues/2) | 數位孿生告警(SVG)、響應式 |
+| M1430714 | C | `feature/diagnosis-cards` | [#3](https://github.com/Ji0987/ai-anomaly-war-room/issues/3) | 六格診斷卡、空資料防呆 |
+| TSENG115 | D | `feature/decision-loss` | [#4](https://github.com/Ji0987/ai-anomaly-war-room/issues/4) | 決策/損失 slider、測試彙整 |
 
-環狀互審:A 審 D、B 審 A、C 審 B、D 審 C(對照上表最後一欄:每個人的 PR 由固定的另一人審)。
+PR 審查(2026-08-01 起):由 Codex 自動審查取代原本的人工環狀互審,PR 開啟時觸發。
+Codex 審查通過或無 blocking 建議後,由作者自行 merge,不再需要指定另一位組員核准。
+細節見 [docs/development-guide.md](docs/development-guide.md)。
 
 `feature/twin-alert`、`feature/diagnosis-cards` 已有 AI 草稿 commit,是起點不是終點——負責人仍要看懂、調整、加上自己的東西才能送 PR。
 
@@ -84,7 +86,7 @@ Repo:https://github.com/Ji0987/ai-anomaly-war-room
 - 手機尺寸(390×844)驗收由使用者自己動手操作、自己描述結果,不是 AI 幫忙截圖就算數。
 - git 只用 `git add -- <已確認過的檔案>`,不要用 `git add .`(避免不小心帶入不相關的暫存檔)。
 - commit 訊息格式:`<用自己的話描述做了什麼> (REQ-xx)`。
-- push 後開 Draft PR 到 `dev`,依 `.github/PULL_REQUEST_TEMPLATE.md` 填完,指定分工表裡對應的 reviewer。
+- push 後開 Draft PR 到 `dev`,依 `.github/PULL_REQUEST_TEMPLATE.md` 填完;審查交給 Codex 自動審查,不再指定人工 reviewer。
 - PR 開好後,只更新 `docs/contribution-matrix.md` 裡「自己那一列」的連結,不要動別人的列(避免衝突)。
 
 ## 給不同 AI 工具的補充

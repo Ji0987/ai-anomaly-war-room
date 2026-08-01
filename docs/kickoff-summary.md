@@ -55,7 +55,7 @@ AI 生產異常戰情室:一個完全離線的網頁展示,90 秒走完「看見
 2. 從 `dev` 建自己的 feature 分支
 3. 寫一句自己那頁的使用者故事 + 2-3 條驗收條件(對照 Issue 裡列的 AC)
 4. 做一個真實的小改動(哪怕只是換一個字)、commit、push
-5. 開一個 Draft PR,指定 reviewer(環狀互審:A→D 審、B→A 審、C→B 審、D→C 審)
+5. 開一個 Draft PR(由 Codex 自動審查,不再指定人工 reviewer,見 [development-guide.md](development-guide.md))
 
 ## 大致里程碑(約 4 週,可依實際調整)
 

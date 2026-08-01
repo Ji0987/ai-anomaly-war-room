@@ -23,4 +23,4 @@ REQ-xx(對應 docs/requirements.md)
 
 ## Reviewer
 
-@<!-- 環狀互審(4人):A審D、B審A、C審B、D審C -->
+由 Codex 自動審查(PR 開啟時觸發);審查通過或無 blocking 建議後由作者自行 merge。
