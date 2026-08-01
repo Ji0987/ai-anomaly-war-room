@@ -1,9 +1,14 @@
 import { SCENARIO } from '../app/state'
+import { isRecord, renderDataError } from '../app/error-guard'
 
 // 工作包 C:AI 老師傅六格診斷卡(feature/diagnosis-cards)
 export function renderDiagnosis(root: HTMLElement): void {
-  const stage = SCENARIO.stages[2]
-  const c = stage.card!
+  const stage = SCENARIO.stages[2] as Record<string, unknown> | undefined
+  const c = stage?.card
+  if (!stage || typeof stage.label !== 'string' || typeof stage.time !== 'string' || !isRecord(c) || typeof c.rootCause !== 'string' || typeof c.confidence !== 'number' || !Array.isArray(c.evidence) || !c.evidence.every((item) => typeof item === 'string') || typeof c.knowledge !== 'string' || typeof c.action !== 'string' || typeof c.reviewStatus !== 'string' || typeof c.source !== 'string') {
+    renderDataError(root, '診斷階段的 card 資料缺漏或格式不正確，請確認情境資料。')
+    return
+  }
   root.innerHTML = `
     <section class="stage stage-critical">
       <h1>${stage.label}</h1>

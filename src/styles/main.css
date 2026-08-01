@@ -86,6 +86,15 @@ body {
 .governance { color: var(--warning); font-size: 0.9rem; }
 .note { color: var(--muted); font-size: 0.8rem; }
 
+.data-error {
+  background: var(--panel);
+  border-left: 4px solid var(--critical);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.data-error h1 { font-size: 1.2rem; margin-bottom: 0.4rem; }
+.data-error p { color: var(--muted); }
+
 .whatif input[type='range'] { width: 100%; margin: 0.6rem 0; }
 
 #statusbar {
