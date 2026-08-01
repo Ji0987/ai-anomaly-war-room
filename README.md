@@ -5,6 +5,7 @@
 > 模擬資料|離線事件回放|不含即時控制
 
 **第一次看這個 repo?先讀 [docs/kickoff-summary.md](docs/kickoff-summary.md)。**
+**沒用過 git/GitHub?先照 [docs/team-setup.md](docs/team-setup.md) 把環境裝好,之後打開 AI 助手問「我該做什麼」就好(AI 會讀 [AGENTS.md](AGENTS.md) 引導你)。**
 
 ## 快速開始
 
