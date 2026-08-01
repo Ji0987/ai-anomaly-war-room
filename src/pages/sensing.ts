@@ -1,4 +1,5 @@
 import { SCENARIO } from '../app/state'
+import { renderTwin } from '../components/twin'
 
 // 工作包 B:異常事件頁(feature/twin-alert)
 export function renderSensing(root: HTMLElement): void {
@@ -19,8 +20,7 @@ export function renderSensing(root: HTMLElement): void {
         <h2>邊緣異常評分</h2>
         <p>裝置 ${e.deviceId}|評分 <strong>${e.score}</strong>(門檻 ${e.threshold})→ 觸發告警</p>
       </div>
-      <div id="twin-placeholder" class="twin">
-        <p>產線數位孿生視圖(三號機台轉黃)</p>
-      </div>
+      <div id="twin-mount" class="twin" role="img" aria-label="產線數位孿生視圖"></div>
     </section>`
+  renderTwin(root.querySelector('#twin-mount')!, stage.status)
 }

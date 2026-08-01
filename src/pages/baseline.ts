@@ -1,6 +1,6 @@
 import { SCENARIO } from '../app/state'
+import { renderTwin } from '../components/twin'
 
-// 工作包 A/B 共同起點:正常基線頁(feature/replay-shell 與 feature/twin-alert 從這裡擴充)
 export function renderBaseline(root: HTMLElement): void {
   const stage = SCENARIO.stages[0]
   const s = stage.signals!
@@ -14,9 +14,7 @@ export function renderBaseline(root: HTMLElement): void {
         <div class="kpi"><span class="kpi-value">${s.vibration_rms}</span><span class="kpi-label">振動 RMS</span></div>
         <div class="kpi"><span class="kpi-value">${s.current_a}A</span><span class="kpi-label">電流</span></div>
       </div>
-      <div id="twin-placeholder" class="twin">
-        <!-- TODO(工作包 B): 以 assets/factory-map.svg 取代,狀態圓點吃同一份 stage 資料 -->
-        <p>產線數位孿生視圖(全站綠燈)</p>
-      </div>
+      <div id="twin-mount" class="twin" role="img" aria-label="產線數位孿生視圖"></div>
     </section>`
+  renderTwin(root.querySelector('#twin-mount')!, stage.status)
 }

@@ -1,4 +1,5 @@
 import { SCENARIO, loadState, saveState } from '../app/state'
+import { renderTwin } from '../components/twin'
 
 // 工作包 D:根因閉環 + 提前預警損失 what-if slider(feature/decision-loss)
 // 避免損失 = 縮短的延遲分鐘 × 每分鐘產量 × 缺陷率差 × 單位不良成本
@@ -14,6 +15,7 @@ export function renderDecision(root: HTMLElement): void {
     <section class="stage stage-resolved">
       <h1>${stage.label}</h1>
       <p class="meta">${SCENARIO.line}|${SCENARIO.station}|${stage.time}|來源:${stage.loss!.source}</p>
+      <div id="twin-mount" class="twin twin-mini" role="img" aria-label="產線數位孿生視圖"></div>
       <div class="truth-card">
         <h2>根因揭曉</h2>
         <p>${stage.truth}</p>
@@ -26,6 +28,7 @@ export function renderDecision(root: HTMLElement): void {
         <p class="note">單價與產能為模擬營運假設</p>
       </div>
     </section>`
+  renderTwin(root.querySelector('#twin-mount')!, stage.status)
 
   const slider = root.querySelector<HTMLInputElement>('#delay-slider')!
   slider.addEventListener('input', () => {

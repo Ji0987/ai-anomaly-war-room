@@ -72,6 +72,9 @@ body {
   padding: 1rem;
   margin-bottom: 1rem;
 }
+.twin svg { width: 100%; height: auto; display: block; }
+.twin-mini { max-width: 360px; padding: 0.6rem; }
+.twin-mini svg { max-height: 90px; }
 
 .diagnosis-card {
   display: grid;
