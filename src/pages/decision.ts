@@ -30,7 +30,7 @@ export function renderDecision(root: HTMLElement): void {
     <section class="stage stage-resolved">
       <h1>${escapeHtml(stage.label)}</h1>
       <p class="meta">${escapeHtml(SCENARIO_META.line)}|${escapeHtml(SCENARIO_META.station)}|${escapeHtml(stage.time)}|來源:${escapeHtml(stage.loss.source)}</p>
-      <div id="twin-mount" class="twin twin-mini" role="img" aria-label="產線數位孿生視圖"></div>
+      <div id="twin-mount" class="twin twin-mini" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
       <div class="truth-card">
         <h2>根因揭曉</h2>
         <p>${escapeHtml(stage.truth)}</p>

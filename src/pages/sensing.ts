@@ -17,6 +17,17 @@ export function renderSensing(root: HTMLElement): void {
   const crossed = e.score >= e.threshold
   const baseline = stageOrNull('baseline', isBaselineStage)
   const tempDelta = baseline ? (s.temperature_c - baseline.signals.temperature_c).toFixed(1) : null
+  const kpiState = (signal: string) => {
+    const hit = e.ruleHits.find((ruleHit) => ruleHit.signal === signal)
+    const warn = hit?.triggered === true
+    const arrow = warn ? (hit.observed >= hit.baseline ? ' ↑' : ' ↓') : ''
+    return { warn, arrow }
+  }
+  const temperatureKpi = kpiState('temperature_c')
+  const vibrationKpi = kpiState('vibration_rms')
+  const currentKpi = kpiState('current_a')
+  const yieldWarn = crossed
+  const yieldArrow = crossed && baseline && stage.yield < baseline.yield ? ' ↓' : ''
 
   const trendText = e.trend.map((t) => `${escapeHtml(t.time)} ${t.temperature_c}°C`).join(' → ')
 
@@ -35,16 +46,16 @@ export function renderSensing(root: HTMLElement): void {
     .join('')
 
   root.innerHTML = `
-    <section class="stage stage-warning">
+    <section class="stage stage-${stage.status}">
       <h1>${escapeHtml(stage.label)}</h1>
       <p class="meta">${escapeHtml(SCENARIO_META.line)}|${escapeHtml(SCENARIO_META.station)}|${escapeHtml(stage.time)}|來源:${escapeHtml(s.source)}</p>
       <div class="kpi-row">
-        <div class="kpi warn"><span class="kpi-value">${stage.yield}%</span><span class="kpi-label">良率 ↓</span></div>
-        <div class="kpi warn"><span class="kpi-value">${s.temperature_c}°C</span><span class="kpi-label">模具溫度 ↑</span></div>
-        <div class="kpi"><span class="kpi-value">${s.vibration_rms}</span><span class="kpi-label">振動 RMS</span></div>
-        <div class="kpi warn"><span class="kpi-value">${s.current_a}A</span><span class="kpi-label">電流 ↑</span></div>
+        <div class="kpi${yieldWarn ? ' warn' : ''}"><span class="kpi-value">${stage.yield}%</span><span class="kpi-label">良率${yieldArrow}</span></div>
+        <div class="kpi${temperatureKpi.warn ? ' warn' : ''}"><span class="kpi-value">${s.temperature_c}°C</span><span class="kpi-label">模具溫度${temperatureKpi.arrow}</span></div>
+        <div class="kpi${vibrationKpi.warn ? ' warn' : ''}"><span class="kpi-value">${s.vibration_rms}</span><span class="kpi-label">振動 RMS${vibrationKpi.arrow}</span></div>
+        <div class="kpi${currentKpi.warn ? ' warn' : ''}"><span class="kpi-value">${s.current_a}A</span><span class="kpi-label">電流${currentKpi.arrow}</span></div>
       </div>
-      <div id="twin-mount" class="twin" role="img" aria-label="產線數位孿生視圖"></div>
+      <div id="twin-mount" class="twin" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
       <div class="edge-card">
         <h2>邊緣異常評分 — 可解釋規則告警</h2>
         <p>裝置 ${escapeHtml(e.deviceId)}|評分 <strong>${e.score}</strong>(門檻 ${e.threshold})→ ${crossed ? '觸發告警' : '未觸發'}</p>

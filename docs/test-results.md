@@ -18,7 +18,7 @@
 | TC-03a | ✅ | 六格齊全,證據 3 條且皆含時間點(T+8/T+20) |
 | TC-04a | ✅ | slider=0 → NT$0;slider=30 → 30×40×0.07×25=NT$2,100,無 NaN |
 | TC-04b | ✅ | slider=10 → 顯示 NT$700,與公式一致 |
-| TC-05a | ✅ | Browser pane 375×812(近似 390×844)瀏覽四頁,`scrollWidth`=`clientWidth`=375,無橫向捲動 |
+| TC-05a | ⏭ | 未執行——TC-05a 要求使用者在 390×844 實機操作。AI 僅在 Browser pane 以 375×812 做過輔助檢查(`scrollWidth`=`clientWidth`=375,無橫向捲動),這**不是**正式驗收證據,待負責人(B)本人於 390×844 實機操作四頁與 slider 後記錄結果 |
 | TC-06a | ✅ | `npm run build:offline` 成功產出 dist-offline/index.html(單檔) |
 | TC-06b | ⏭ | 離線單檔未實機飛航模式開啟,僅確認 build:offline 產物存在,建議人工用 file:// 實測 |
 | TC-07a | ✅ | 切至 EVT-003 第 2 頁顯示「此階段資料無法顯示」防呆訊息;第 1/3/4 頁不受影響 |

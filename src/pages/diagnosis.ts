@@ -36,7 +36,7 @@ export function renderDiagnosis(root: HTMLElement): void {
     <section class="stage stage-critical">
       <h1>${escapeHtml(stage.label)}</h1>
       <p class="meta">${escapeHtml(SCENARIO_META.line)}|${escapeHtml(SCENARIO_META.station)}|${escapeHtml(stage.time)}|來源:${escapeHtml(c.source)}</p>
-      <div id="twin-mount" class="twin twin-mini" role="img" aria-label="產線數位孿生視圖"></div>
+      <div id="twin-mount" class="twin twin-mini" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
       <div class="diagnosis-card">
         <div class="cell"><h3>推定根因</h3><p>${escapeHtml(c.rootCause)}</p></div>
         <div class="cell"><h3>信心</h3><p>${c.confidence}%</p><p class="note">${escapeHtml(c.confidenceBasis)}</p></div>

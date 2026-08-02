@@ -22,7 +22,7 @@ export function renderBaseline(root: HTMLElement): void {
         <div class="kpi"><span class="kpi-value">${s.vibration_rms}</span><span class="kpi-label">振動 RMS</span></div>
         <div class="kpi"><span class="kpi-value">${s.current_a}A</span><span class="kpi-label">電流</span></div>
       </div>
-      <div id="twin-mount" class="twin" role="img" aria-label="產線數位孿生視圖"></div>
+      <div id="twin-mount" class="twin" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
     </section>`
 
   renderTwin(root.querySelector('#twin-mount')!, [

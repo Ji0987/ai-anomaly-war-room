@@ -40,6 +40,7 @@ export function uninstrumentedStations(): TwinStation[] {
 // 狀態同時補文字標籤,不只靠顏色傳達(390×844 與色弱使用者可讀)。
 export function renderTwin(container: HTMLElement, stations: TwinStation[], options?: { mini?: boolean }): void {
   container.innerHTML = factoryMapSvg
+  container.querySelector('svg')?.removeAttribute('role')
   container.classList.toggle('twin-mini', Boolean(options?.mini))
 
   const detail = document.createElement('div')
