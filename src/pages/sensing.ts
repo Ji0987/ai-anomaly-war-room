@@ -15,6 +15,7 @@ export function renderSensing(root: HTMLElement): void {
   const s = stage.signals
   const e = stage.edge
   const crossed = e.score >= e.threshold
+  const dispatched = crossed && !e.suppressed
   const baseline = stageOrNull('baseline', isBaselineStage)
   const tempDelta = baseline ? (s.temperature_c - baseline.signals.temperature_c).toFixed(1) : null
   const kpiState = (signal: string) => {
@@ -58,7 +59,7 @@ export function renderSensing(root: HTMLElement): void {
       <div id="twin-mount" class="twin" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
       <div class="edge-card">
         <h2>邊緣異常評分 — 可解釋規則告警</h2>
-        <p>裝置 ${escapeHtml(e.deviceId)}|評分 <strong>${e.score}</strong>(門檻 ${e.threshold})→ ${crossed ? '觸發告警' : '未觸發'}</p>
+        <p>裝置 ${escapeHtml(e.deviceId)}|評分 <strong>${e.score}</strong>(門檻 ${e.threshold})→ ${dispatched ? '觸發告警' : '未觸發'}</p>
         <p class="note">時間窗 ${e.windowSeconds} 秒｜遲滯 ${e.hysteresisSeconds} 秒｜${e.suppressed ? '本次已被抑制,不重複派發' : '未被抑制'}｜抑制規則:${escapeHtml(e.suppressionRule)}</p>
         <p class="note">溫度趨勢:${trendText}</p>
         <div class="rule-table-wrap">
@@ -79,7 +80,7 @@ export function renderSensing(root: HTMLElement): void {
       dotId: 'dot-machine',
       name: SCENARIO_META.station,
       status: stage.status,
-      detail: `模具溫度 ${s.temperature_c}°C${tempDelta ? `(較基線 ${Number(tempDelta) >= 0 ? '+' : ''}${tempDelta}°C)` : ''}｜邊緣評分 ${e.score}(門檻 ${e.threshold})→ ${crossed ? '觸發告警' : '未觸發'}`,
+      detail: `模具溫度 ${s.temperature_c}°C${tempDelta ? `(較基線 ${Number(tempDelta) >= 0 ? '+' : ''}${tempDelta}°C)` : ''}｜邊緣評分 ${e.score}(門檻 ${e.threshold})→ ${dispatched ? '觸發告警' : '未觸發'}`,
     },
     ...uninstrumentedStations(),
   ])
