@@ -7,7 +7,10 @@
   --normal: #34c77b;
   --warning: #f5b942;
   --critical: #ef5350;
-  --resolved: #4f8ef7;
+  /* AC-02a:第 4 頁應紅轉綠(已處置)。曾誤設為藍色 #4f8ef7,與驗收條件不符,已修正為
+     可辨識的綠色但刻意與 --normal 不同色階,讓「已處置」跟「從未異常」在視覺上仍可區分。 */
+  --resolved: #22b8a6;
+  --accent: #4f8ef7;
   --radius: 10px;
 }
 
@@ -34,6 +37,17 @@ body {
 #brand { font-weight: 700; }
 #event-badge { color: var(--muted); font-size: 0.85rem; }
 
+#scenario-picker { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--muted); }
+#scenario-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  max-width: 60vw;
+}
+
 #nav { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 
 .nav-btn, #replay-controls button {
@@ -46,7 +60,7 @@ body {
   font-size: 0.9rem;
 }
 
-.nav-btn.active { border-color: var(--resolved); color: var(--resolved); }
+.nav-btn.active { border-color: var(--accent); color: var(--accent); }
 #replay-controls { margin-left: auto; display: flex; gap: 0.4rem; }
 
 #app { flex: 1; padding: 1rem; max-width: 1100px; width: 100%; margin: 0 auto; }
@@ -66,12 +80,47 @@ body {
 .kpi-value { display: block; font-size: 1.5rem; font-weight: 700; }
 .kpi-label { color: var(--muted); font-size: 0.8rem; }
 
-.twin, .edge-card, .truth-card, .whatif {
+.twin, .edge-card, .truth-card, .whatif, .recovery-card, .data-error {
   background: var(--panel);
   border-radius: var(--radius);
   padding: 1rem;
   margin-bottom: 1rem;
 }
+
+.twin svg { width: 100%; height: auto; display: block; }
+.twin circle[role='button'] { cursor: pointer; }
+.twin circle[role='button']:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.twin-mini { max-width: 360px; padding: 0.6rem; }
+.twin-mini svg { max-height: 90px; }
+.twin-detail {
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  min-height: 2.6em;
+}
+.twin-hint { color: var(--muted); }
+.twin-status-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: #08131c;
+}
+.twin-status-tag.status-normal { background: var(--normal); }
+.twin-status-tag.status-warning { background: var(--warning); }
+.twin-status-tag.status-critical { background: var(--critical); color: #fff; }
+.twin-status-tag.status-resolved { background: var(--resolved); }
+.twin-status-tag.status-unavailable { background: var(--muted); color: #08131c; }
+
+.rule-table-wrap { overflow-x: auto; margin: 0.6rem 0; }
+.rule-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 480px; }
+.rule-table th, .rule-table td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.rule-table th { color: var(--muted); font-weight: 600; }
+.rule-table tr.rule-hit { color: var(--warning); }
+.rule-table .rule-note { color: var(--muted); font-size: 0.8rem; }
 
 .diagnosis-card {
   display: grid;
@@ -82,9 +131,15 @@ body {
 .diagnosis-card .cell { background: var(--panel); border-radius: var(--radius); padding: 0.8rem; }
 .diagnosis-card h3 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
 .diagnosis-card ul { padding-left: 1.1rem; }
+.diagnosis-card li { margin-bottom: 0.3rem; }
+.evidence-time { display: inline-block; color: var(--accent); font-size: 0.75rem; margin-right: 0.4rem; font-weight: 600; }
 
 .governance { color: var(--warning); font-size: 0.9rem; }
+.provenance { color: var(--muted); font-size: 0.75rem; margin-top: 0.4rem; }
 .note { color: var(--muted); font-size: 0.8rem; }
+
+.data-error { border: 1px solid var(--critical); }
+.data-error h1 { color: var(--critical); font-size: 1.1rem; margin-bottom: 0.4rem; }
 
 .whatif input[type='range'] { width: 100%; margin: 0.6rem 0; }
 
@@ -98,5 +153,8 @@ body {
 
 @media (max-width: 480px) {
   #replay-controls { margin-left: 0; width: 100%; }
+  #scenario-picker { width: 100%; }
+  #scenario-select { flex: 1; max-width: none; }
   .stage h1 { font-size: 1.15rem; }
+  .rule-table { min-width: 420px; }
 }

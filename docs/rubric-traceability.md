@@ -11,6 +11,6 @@
 | 5 | 功能完整度 | 20 | 四頁 + 90 秒導覽 + slider 核心流程可完整操作 |
 | 6 | 功能測試列表與檢核結果 | 10 | test-plan.md + test-results.md(TC 對齊 AC) |
 | 7 | 可使用性與基本品質 | 5 | REQ-05/REQ-07:手機尺寸、空資料提示(TC-05a/TC-07a) |
-| 8 | 安全與資料處理基本規範 | 5 | SECURITY.md;.gitignore 排除 .env;TC-08a 機密掃描 |
+| 8 | 安全與資料處理基本規範 | 5 | SECURITY.md;.gitignore 排除 .env;TC-08a 機密掃描(全 repo)、TC-08b `npm audit` 0 vulnerabilities |
 
 追蹤鏈範例:`REQ-03 → AC-03a → TC-03a → PR #12`

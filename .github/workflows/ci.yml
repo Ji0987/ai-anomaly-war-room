@@ -20,4 +20,7 @@ jobs:
       - run: npm run build:offline
       - name: 機密字串掃描
         run: |
-          ! grep -rEn "(api[_-]?key|password|secret|token)\s*[:=]\s*['\"][A-Za-z0-9_-]{16,}" src/ || (echo "疑似機密字串,請檢查" && exit 1)
+          # 掃描全部 git 追蹤檔(docs/、.github/ 等),不再只查 src/;
+          # package-lock.json 的套件 tarball URL 常含高熵字串,排除以避免誤報。
+          FILES=$(git ls-files -- . ':!package-lock.json')
+          ! grep -nE "(api[_-]?key|password|secret|token)\s*[:=]\s*['\"][A-Za-z0-9_-]{16,}" $FILES || (echo "疑似機密字串,請檢查" && exit 1)

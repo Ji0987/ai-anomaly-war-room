@@ -22,6 +22,9 @@ npm run build:offline  # 單檔 dist-offline/index.html,可離線雙擊開啟(�
 | 3 | 現場知識診斷|AI 老師傅卡 | 六格診斷卡、空資料防呆 |
 | 4 | 根因閉環|證據、處置與止損 | 決策與損失 slider |
 
+topbar 右側「情境」下拉可切換 4 種內建情境(確診異常/正常巡檢/感測缺值/疑似誤報),
+不是只有一個戲劇化的成功案例,見 [docs/data-model.md](docs/data-model.md#情境庫不是只有一個戲劇化的成功案例)。
+
 ## 協作規範(對應課程評分表)
 
 - 分支流程:`feature/* → dev → main`;`main`/`dev` 禁止直接 push

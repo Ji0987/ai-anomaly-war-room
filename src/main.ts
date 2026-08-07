@@ -1,5 +1,6 @@
 import './styles/main.css'
-import { SCENARIO, STAGE_IDS, resetState } from './app/state'
+import { SCENARIO_META, STAGE_IDS, currentScenarioId, resetState, setScenario } from './app/state'
+import { SCENARIO_OPTIONS } from './data/scenarios'
 import { register, startRouter, navigate, currentStageId } from './app/router'
 import { play, stop, isPlaying } from './app/replay-controller'
 import { renderBaseline } from './pages/baseline'
@@ -15,10 +16,15 @@ register('decision', renderDecision)
 const app = document.getElementById('app')!
 const nav = document.getElementById('nav')!
 const badge = document.getElementById('event-badge')!
+const scenarioSelect = document.getElementById('scenario-select') as HTMLSelectElement
 const btnPlay = document.getElementById('btn-play') as HTMLButtonElement
 const btnReset = document.getElementById('btn-reset') as HTMLButtonElement
 
-badge.textContent = `${SCENARIO.eventId}|${SCENARIO.summary}`
+badge.textContent = SCENARIO_META ? `${SCENARIO_META.eventId}・${SCENARIO_META.scenarioLabel}|${SCENARIO_META.summary}` : '情境資料無法載入'
+
+scenarioSelect.innerHTML = SCENARIO_OPTIONS.map((option) => `<option value="${option.id}">${option.label}</option>`).join('')
+scenarioSelect.value = currentScenarioId()
+scenarioSelect.addEventListener('change', () => setScenario(scenarioSelect.value))
 
 const NAV_LABELS: Record<string, string> = {
   baseline: '1 正常基線',

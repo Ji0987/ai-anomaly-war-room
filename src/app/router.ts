@@ -10,7 +10,7 @@ export function register(stageId: string, render: RenderFn): void {
 
 export function currentStageId(): string {
   const hash = location.hash.replace(/^#\/?/, '')
-  return STAGE_IDS.includes(hash) ? hash : STAGE_IDS[0]
+  return (STAGE_IDS as readonly string[]).includes(hash) ? hash : STAGE_IDS[0]
 }
 
 export function navigate(stageId: string): void {

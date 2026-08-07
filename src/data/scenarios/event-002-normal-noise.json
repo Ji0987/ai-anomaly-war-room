@@ -1,0 +1,120 @@
+{
+  "eventId": "EVT-002",
+  "scenarioType": "normal_noise",
+  "scenarioLabel": "正常巡檢",
+  "line": "二號產線",
+  "station": "三號機台",
+  "summary": "例行巡檢:訊號小幅波動但未跨過告警門檻",
+  "materialChangeEvent": { "time": "N/A", "description": "本輪無換料事件,僅例行巡檢" },
+  "stages": [
+    {
+      "id": "baseline",
+      "label": "正常基線|全域感知",
+      "time": "T-10",
+      "yield": 98.2,
+      "status": "normal",
+      "signals": { "temperature_c": 61.8, "vibration_rms": 0.29, "current_a": 3.8, "source": "raw_sensor(模擬)" }
+    },
+    {
+      "id": "sensing",
+      "label": "巡檢快照|邊緣評分未觸發",
+      "time": "T+8",
+      "yield": 97.9,
+      "status": "normal",
+      "signals": { "temperature_c": 63.5, "vibration_rms": 0.33, "current_a": 4.0, "source": "raw_sensor(模擬)" },
+      "edge": {
+        "deviceId": "EDGE-03",
+        "score": 0.0,
+        "threshold": 0.6,
+        "windowSeconds": 300,
+        "hysteresisSeconds": 60,
+        "suppressed": false,
+        "suppressionRule": "同裝置同分數 60 秒內不重複派發告警,避免抖動誤報",
+        "trend": [
+          { "time": "T+2", "temperature_c": 62.5 },
+          { "time": "T+5", "temperature_c": 63.0 },
+          { "time": "T+8", "temperature_c": 63.5 }
+        ],
+        "ruleHits": [
+          {
+            "signal": "temperature_c",
+            "label": "模具溫度",
+            "weight": 0.5,
+            "observed": 63.5,
+            "baseline": 61.8,
+            "ruleThreshold": 70.0,
+            "triggered": false,
+            "note": "溫度小幅波動,未超過警戒值"
+          },
+          {
+            "signal": "current_a",
+            "label": "電流",
+            "weight": 0.3,
+            "observed": 4.0,
+            "baseline": 3.8,
+            "ruleThreshold": 4.4,
+            "triggered": false,
+            "note": "電流正常,未超過額定門檻"
+          },
+          {
+            "signal": "vibration_rms",
+            "label": "振動",
+            "weight": 0.2,
+            "observed": 0.33,
+            "baseline": 0.29,
+            "ruleThreshold": 0.45,
+            "triggered": false,
+            "note": "振動正常,未超過門檻"
+          }
+        ],
+        "scoring": {
+          "method": "score = Σ(已觸發規則權重) × 感測器品質係數,四捨五入至小數點後 2 位",
+          "sensorQuality": 0.98,
+          "sensorQualityNote": "感測器校正在有效期內",
+          "rawTriggeredWeightSum": 0.0
+        },
+        "source": "edge(規則評分)"
+      }
+    },
+    {
+      "id": "diagnosis",
+      "label": "現場知識診斷|AI 老師傅卡",
+      "time": "T+20",
+      "yield": 97.7,
+      "status": "normal",
+      "card": {
+        "verdict": "no_anomaly",
+        "rootCause": "無需歸因:各項訊號皆在正常範圍內波動",
+        "confidence": 96,
+        "confidenceBasis": "三項規則均未觸發,且與歷史正常巡檢紀錄分佈一致",
+        "evidence": [
+          { "time": "T+8", "description": "模具溫度 63.5°C,較基線 +1.7°C,屬日常波動範圍(±3°C 內)", "metric": "temperature_c", "value": 63.5 },
+          { "time": "T+20", "description": "良率維持 97.7%~98.2% 區間,未見持續下降趨勢", "metric": "yield_pct", "value": 97.7 },
+          { "time": "T+8", "description": "邊緣評分 0.00,遠低於門檻 0.6,三項規則皆未觸發", "metric": "edge_score", "value": 0 }
+        ],
+        "knowledge": "設備 SOP v3.2 §4.1 正常波動範圍定義",
+        "action": "無需處置,依例行頻率持續監測",
+        "contentReview": { "status": "pending", "reviewer": "", "reviewedAt": "" },
+        "caseDisposition": { "status": "completed", "actor": "值班人員", "actedAt": "2026-08-01T09:45:00+08:00", "note": "確認為正常巡檢,結案" },
+        "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
+        "source": "diagnosis(Dify 預生成)"
+      }
+    },
+    {
+      "id": "decision",
+      "label": "根因閉環|證據、處置與止損",
+      "time": "T+30",
+      "yield": 97.6,
+      "status": "normal",
+      "truth": "本次為例行巡檢,無異常事件",
+      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0, "costPerDefect": 25, "source": "loss(what-if 假設模型)" },
+      "recovery": {
+        "status": "verified",
+        "targetYieldPct": 97,
+        "observedYieldAtCheckPct": 97.6,
+        "checkWindowMinutes": 30,
+        "reopenCondition": "若良率低於 95% 持續 10 分鐘以上,重新開立事件"
+      }
+    }
+  ]
+}
