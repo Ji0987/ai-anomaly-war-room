@@ -1,4 +1,4 @@
-/* 工作包 E 起點:responsive-offline。設計 token 統一在 :root,四頁共用同一套元件樣式 */
+/* 設計 token 統一在 :root,四頁共用同一套元件樣式 */
 :root {
   --bg: #0f1420;
   --panel: #1a2233;

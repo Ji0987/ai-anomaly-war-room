@@ -1,6 +1,6 @@
 import { SCENARIO } from '../app/state'
 
-// 工作包 C:AI 老師傅六格診斷卡(feature/diagnosis-cards)
+// AI 老師傅六格診斷卡
 export function renderDiagnosis(root: HTMLElement): void {
   const stage = SCENARIO.stages[2]
   const c = stage.card!
