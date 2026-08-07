@@ -62,5 +62,5 @@ export function renderDiagnosis(root: HTMLElement): void {
       detail: `AI 研判:${c.rootCause}(信心 ${c.confidence}%)`,
     },
     ...uninstrumentedStations(),
-  ])
+  ], { mini: true })
 }

@@ -90,11 +90,11 @@
         "evidence": [
           { "time": "T+8", "description": "溫度 70.8°C 壓線超過警戒值 70.0°C,但 T+2→T+8 升幅平緩,非持續陡升", "metric": "temperature_c", "value": 70.8 },
           { "time": "T+8", "description": "電流 4.1A 維持正常範圍,未如真實異常案例同步偏高", "metric": "current_a", "value": 4.1 },
-          { "time": "T+20", "description": "良率僅短暫降至 97.0% 後回升至 96.5%~97.8% 區間,未持續惡化", "metric": "yield_pct", "value": 96.5 }
+          { "time": "T+20", "description": "良率自 T+8 的 97.0% 續降至 96.5%,尚未回升,是否僅為感測雜訊待複判確認", "metric": "yield_pct", "value": 96.5 }
         ],
         "knowledge": "設備 SOP v3.2 §4.3 疑似誤報複判流程/振動感測器已知問題單 #041",
         "action": "現場人工複判→確認製程外觀正常→標記為誤報結案,追蹤問題單 #041 感測器校正",
-        "contentReview": { "status": "approved", "reviewer": "工作包 C 負責人", "reviewedAt": "2026-08-01T09:55:00+08:00" },
+        "contentReview": { "status": "pending", "reviewer": "", "reviewedAt": "" },
         "caseDisposition": { "status": "returned_for_review", "actor": "值班人員", "actedAt": "2026-08-01T10:00:00+08:00", "note": "現場複判無異常外觀,退回 AI 建議,標記誤報" },
         "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
         "source": "diagnosis(Dify 預生成)"

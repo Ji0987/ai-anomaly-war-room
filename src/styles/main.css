@@ -113,6 +113,7 @@ body {
 .twin-status-tag.status-warning { background: var(--warning); }
 .twin-status-tag.status-critical { background: var(--critical); color: #fff; }
 .twin-status-tag.status-resolved { background: var(--resolved); }
+.twin-status-tag.status-unavailable { background: var(--muted); color: #08131c; }
 
 .rule-table-wrap { overflow-x: auto; margin: 0.6rem 0; }
 .rule-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 480px; }

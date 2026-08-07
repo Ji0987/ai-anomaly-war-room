@@ -94,7 +94,7 @@
         ],
         "knowledge": "設備 SOP v3.2 §4.1 正常波動範圍定義",
         "action": "無需處置,依例行頻率持續監測",
-        "contentReview": { "status": "approved", "reviewer": "工作包 C 負責人", "reviewedAt": "2026-08-01T09:42:00+08:00" },
+        "contentReview": { "status": "pending", "reviewer": "", "reviewedAt": "" },
         "caseDisposition": { "status": "completed", "actor": "值班人員", "actedAt": "2026-08-01T09:45:00+08:00", "note": "確認為正常巡檢,結案" },
         "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
         "source": "diagnosis(Dify 預生成)"

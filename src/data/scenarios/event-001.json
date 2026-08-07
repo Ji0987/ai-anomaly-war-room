@@ -94,7 +94,7 @@
         ],
         "knowledge": "設備 SOP v3.2 §4.2 換料後溫控校驗程序/歷史事件 #018(同機台、同批料號徵候相符)",
         "action": "降載→校驗溫控參數→比對原料批號→確認後復機",
-        "contentReview": { "status": "approved", "reviewer": "工作包 C 負責人", "reviewedAt": "2026-08-01T09:40:00+08:00" },
+        "contentReview": { "status": "pending", "reviewer": "", "reviewedAt": "" },
         "caseDisposition": { "status": "pending", "actor": "", "actedAt": "", "note": "待值班人員現場確認是否採納建議處置" },
         "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
         "source": "diagnosis(Dify 預生成)"

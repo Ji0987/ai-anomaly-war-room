@@ -2,36 +2,40 @@ import factoryMapSvg from '../assets/factory-map.svg?raw'
 import { escapeHtml } from '../app/html'
 import type { StageStatus } from '../app/schema'
 
-const STATUS_COLOR: Record<StageStatus, string> = {
+export type TwinStationStatus = StageStatus | 'unavailable'
+
+const STATUS_COLOR: Record<TwinStationStatus, string> = {
   normal: 'var(--normal)',
   warning: 'var(--warning)',
   critical: 'var(--critical)',
   resolved: 'var(--resolved)',
+  unavailable: 'var(--muted)',
 }
 
-const STATUS_LABEL: Record<StageStatus, string> = {
+const STATUS_LABEL: Record<TwinStationStatus, string> = {
   normal: '正常',
   warning: '警戒',
   critical: '異常',
   resolved: '已處置',
+  unavailable: '無感測資料',
 }
 
 export interface TwinStation {
   dotId: 'dot-feed' | 'dot-machine' | 'dot-qc' | 'dot-pack'
   name: string
-  status: StageStatus
+  status: TwinStationStatus
   detail: string
 }
 
-const UNINSTRUMENTED_DETAIL = '本情境未針對此站點模擬感測數據,實務上應比照三號機台接上規則評分。'
+const UNINSTRUMENTED_DETAIL = '無感測資料:本情境未針對此站點模擬感測數據,實務上應比照三號機台接上規則評分。'
 
 // 目前只有三號機台有情境資料;其餘站點先給誠實的「未模擬」說明,
 // 而不是假裝全站都在監控中(呼應專案一貫的資料來源誠實標示原則)。
 export function uninstrumentedStations(): TwinStation[] {
   return [
-    { dotId: 'dot-feed', name: '原料/換料', status: 'normal', detail: UNINSTRUMENTED_DETAIL },
-    { dotId: 'dot-qc', name: '品質檢測', status: 'normal', detail: UNINSTRUMENTED_DETAIL },
-    { dotId: 'dot-pack', name: '包裝', status: 'normal', detail: UNINSTRUMENTED_DETAIL },
+    { dotId: 'dot-feed', name: '原料/換料', status: 'unavailable', detail: UNINSTRUMENTED_DETAIL },
+    { dotId: 'dot-qc', name: '品質檢測', status: 'unavailable', detail: UNINSTRUMENTED_DETAIL },
+    { dotId: 'dot-pack', name: '包裝', status: 'unavailable', detail: UNINSTRUMENTED_DETAIL },
   ]
 }
 

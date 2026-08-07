@@ -58,7 +58,7 @@ export function renderDecision(root: HTMLElement): void {
       detail: RECOVERY_LABEL[stage.recovery.status] ?? stage.recovery.status,
     },
     ...uninstrumentedStations(),
-  ])
+  ], { mini: true })
 
   const slider = root.querySelector<HTMLInputElement>('#delay-slider')!
   slider.addEventListener('input', () => {
