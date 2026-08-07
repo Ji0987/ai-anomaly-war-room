@@ -64,15 +64,23 @@ export function renderTwin(container: HTMLElement, stations: TwinStation[], opti
     const dot = container.querySelector<SVGCircleElement>(`#${station.dotId}`)
     if (!dot) return
     dot.style.fill = STATUS_COLOR[station.status] ?? STATUS_COLOR.normal
-    dot.setAttribute('tabindex', '0')
-    dot.setAttribute('role', 'button')
-    dot.setAttribute('aria-label', `${station.name}:${STATUS_LABEL[station.status]},點選查看訊號`)
-    dot.addEventListener('click', () => showDetail(station))
-    dot.addEventListener('keydown', (event) => {
+    dot.setAttribute('pointer-events', 'none')
+
+    const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    hitArea.setAttribute('cx', dot.getAttribute('cx') ?? '0')
+    hitArea.setAttribute('cy', dot.getAttribute('cy') ?? '0')
+    hitArea.setAttribute('r', '40')
+    hitArea.setAttribute('fill', 'transparent')
+    hitArea.setAttribute('tabindex', '0')
+    hitArea.setAttribute('role', 'button')
+    hitArea.setAttribute('aria-label', `${station.name}:${STATUS_LABEL[station.status]},點選查看訊號`)
+    hitArea.addEventListener('click', () => showDetail(station))
+    hitArea.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault()
         showDetail(station)
       }
     })
+    dot.insertAdjacentElement('afterend', hitArea)
   })
 }
