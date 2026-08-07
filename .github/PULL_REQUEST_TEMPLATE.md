@@ -20,7 +20,3 @@ REQ-xx(對應 docs/requirements.md)
 - [ ] TC-xx 通過(已更新 docs/test-results.md)
 - [ ] `npm run build` 無錯誤
 - [ ] 無機密資訊(key/token/密碼)進入此 diff
-
-## Reviewer
-
-@<!-- 環狀互審(4人):A審D、B審A、C審B、D審C -->

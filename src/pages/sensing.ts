@@ -1,6 +1,6 @@
 import { SCENARIO } from '../app/state'
 
-// 工作包 B:異常事件頁(feature/twin-alert)
+// 異常事件頁
 export function renderSensing(root: HTMLElement): void {
   const stage = SCENARIO.stages[1]
   const s = stage.signals!

@@ -1,6 +1,6 @@
 import { SCENARIO, loadState, saveState } from '../app/state'
 
-// 工作包 D:根因閉環 + 提前預警損失 what-if slider(feature/decision-loss)
+// 根因閉環 + 提前預警損失 what-if slider
 // 避免損失 = 縮短的延遲分鐘 × 每分鐘產量 × 缺陷率差 × 單位不良成本
 export function computeLoss(delayMinutes: number): number {
   const l = SCENARIO.stages[3].loss!
