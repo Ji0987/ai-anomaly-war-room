@@ -4,7 +4,7 @@ import { renderDataError } from '../app/error-guard'
 import { escapeHtml } from '../app/html'
 import { renderTwin, uninstrumentedStations } from '../components/twin'
 
-// 工作包 A/B 共同起點:正常基線頁
+// 正常基線頁
 export function renderBaseline(root: HTMLElement): void {
   const stage = stageOrNull('baseline', isBaselineStage)
   if (!stage || !SCENARIO_META) {

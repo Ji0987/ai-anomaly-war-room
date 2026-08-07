@@ -4,7 +4,7 @@ import { renderDataError } from '../app/error-guard'
 import { escapeHtml } from '../app/html'
 import { renderTwin, uninstrumentedStations } from '../components/twin'
 
-// 工作包 B:異常事件頁——邊緣評分不是裝飾數字,規則命中明細、時間窗、
+// 異常事件頁——邊緣評分不是裝飾數字,規則命中明細、時間窗、
 // 感測器品質係數與遲滯/抑制規則都要能被追問(P0 可解釋性要求)。
 export function renderSensing(root: HTMLElement): void {
   const stage = stageOrNull('sensing', isSensingStage)

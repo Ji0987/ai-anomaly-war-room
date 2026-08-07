@@ -17,7 +17,7 @@ const DISPOSITION_LABEL: Record<string, string> = {
   completed: '✅ 處置已完成',
 }
 
-// 工作包 C:AI 老師傅六格診斷卡。
+// AI 老師傅六格診斷卡。
 // 「AI 卡內容本身是否審核過」與「這次現場事件的處置是否被人確認」是兩件不同的事,
 // 拆成 contentReview / caseDisposition 兩個獨立欄位,不再混在同一個 reviewStatus 裡。
 export function renderDiagnosis(root: HTMLElement): void {

@@ -11,7 +11,7 @@ const RECOVERY_LABEL: Record<string, string> = {
   reopened: '🔴 已重開案,尚未結案',
 }
 
-// 工作包 D:根因閉環 + 提前預警損失 what-if slider
+// 根因閉環 + 提前預警損失 what-if slider
 // 避免損失 = 縮短的延遲分鐘 × 每分鐘產量 × 缺陷率差 × 單位不良成本
 export function computeLoss(stage: DecisionStage, delayMinutes: number): number {
   const l = stage.loss
