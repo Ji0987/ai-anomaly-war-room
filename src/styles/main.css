@@ -65,6 +65,14 @@ body {
 
 #app { flex: 1; padding: 1rem; max-width: 1100px; width: 100%; margin: 0 auto; }
 
+/* 每頁狀態一律用 stage-${stage.status} 動態帶入(見 schema.ts StageStatus);
+   頂部色條與數位孿生圓點顏色呼應,同一狀態在畫面上有兩個一致的視覺錨點。 */
+.stage { border-top: 3px solid transparent; padding-top: 0.9rem; }
+.stage-normal { border-top-color: var(--normal); }
+.stage-warning { border-top-color: var(--warning); }
+.stage-critical { border-top-color: var(--critical); }
+.stage-resolved { border-top-color: var(--resolved); }
+
 .stage h1 { font-size: 1.4rem; margin-bottom: 0.3rem; }
 .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
 
@@ -134,6 +142,16 @@ body {
 .diagnosis-card li { margin-bottom: 0.3rem; }
 .evidence-time { display: inline-block; color: var(--accent); font-size: 0.75rem; margin-right: 0.4rem; font-weight: 600; }
 
+.content-caveat {
+  color: var(--warning);
+  font-size: 0.85rem;
+  background: rgba(245, 185, 66, 0.1);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
 .governance { color: var(--warning); font-size: 0.9rem; }
 .provenance { color: var(--muted); font-size: 0.75rem; margin-top: 0.4rem; }
 .note { color: var(--muted); font-size: 0.8rem; }
@@ -154,7 +172,9 @@ body {
 @media (max-width: 480px) {
   #replay-controls { margin-left: 0; width: 100%; }
   #scenario-picker { width: 100%; }
-  #scenario-select { flex: 1; max-width: none; }
+  /* flex 子項預設 min-width:auto,長情境標籤(如 EVT-005)會撐開超過螢幕寬度造成橫向捲動,
+     min-width:0 讓 select 真的能縮小,原生下拉選單會自行處理過長選項文字的截斷。 */
+  #scenario-select { flex: 1; max-width: none; min-width: 0; }
   .stage h1 { font-size: 1.15rem; }
   .rule-table { min-width: 420px; }
 }

@@ -21,7 +21,7 @@
       "time": "T+8",
       "yield": 95.0,
       "status": "warning",
-      "signals": { "temperature_c": 69.0, "vibration_rms": 0.40, "source": "raw_sensor(模擬)" },
+      "signals": { "temperature_c": 69.0, "vibration_rms": 0.40, "current_a": null, "source": "raw_sensor(模擬)" },
       "edge": {
         "deviceId": "EDGE-03",
         "score": 0,
@@ -50,11 +50,11 @@
             "signal": "current_a",
             "label": "電流",
             "weight": 0.3,
-            "observed": 0,
+            "observed": null,
             "baseline": 3.85,
             "ruleThreshold": 4.4,
             "triggered": false,
-            "note": "EDGE-03 自 T+8 起無電流回傳,規則無法評分,以未觸發處理並標記資料缺漏"
+            "note": "EDGE-03 自 T+8 起無電流回傳,以 null 明確標記資料缺漏(非電流真的是 0 安培),規則無法評分,以未觸發處理"
           },
           {
             "signal": "vibration_rms",

@@ -1,11 +1,20 @@
 import { SCENARIO_META, stageOrNull } from '../app/state'
-import { isBaselineStage, isSensingStage } from '../app/schema'
+import { isBaselineStage, isSensingStage, type EdgeAlert } from '../app/schema'
 import { renderDataError } from '../app/error-guard'
 import { escapeHtml } from '../app/html'
 import { renderTwin, uninstrumentedStations } from '../components/twin'
 
 // 異常事件頁——邊緣評分不是裝飾數字,規則命中明細、時間窗、
 // 感測器品質係數與遲滯/抑制規則都要能被追問(P0 可解釋性要求)。
+const formatCurrent = (value: number | null): string => (value === null ? '感測器離線,無資料' : `${value}A`)
+
+export function computeEdgeScore(edge: EdgeAlert): { rawTriggeredWeightSum: number; score: number } {
+  const rawTriggeredWeightSum =
+    Math.round(edge.ruleHits.filter((hit) => hit.triggered).reduce((sum, hit) => sum + hit.weight, 0) * 100) / 100
+  const score = Math.round(rawTriggeredWeightSum * edge.scoring.sensorQuality * 100) / 100
+  return { rawTriggeredWeightSum, score }
+}
+
 export function renderSensing(root: HTMLElement): void {
   const stage = stageOrNull('sensing', isSensingStage)
   if (!stage || !SCENARIO_META) {
@@ -14,14 +23,16 @@ export function renderSensing(root: HTMLElement): void {
   }
   const s = stage.signals
   const e = stage.edge
-  const crossed = e.score >= e.threshold
+  const { rawTriggeredWeightSum, score: computedScore } = computeEdgeScore(e)
+  const crossed = computedScore >= e.threshold
+  const scoreVerified = Math.abs(computedScore - e.score) < 0.001
   const dispatched = crossed && !e.suppressed
   const baseline = stageOrNull('baseline', isBaselineStage)
   const tempDelta = baseline ? (s.temperature_c - baseline.signals.temperature_c).toFixed(1) : null
   const kpiState = (signal: string) => {
     const hit = e.ruleHits.find((ruleHit) => ruleHit.signal === signal)
     const warn = hit?.triggered === true
-    const arrow = warn ? (hit.observed >= hit.baseline ? ' ↑' : ' ↓') : ''
+    const arrow = warn && hit.observed !== null ? (hit.observed >= hit.baseline ? ' ↑' : ' ↓') : ''
     return { warn, arrow }
   }
   const temperatureKpi = kpiState('temperature_c')
@@ -37,7 +48,7 @@ export function renderSensing(root: HTMLElement): void {
       (hit) => `
       <tr class="${hit.triggered ? 'rule-hit' : ''}">
         <td>${escapeHtml(hit.label)}</td>
-        <td>${hit.observed}(基線 ${hit.baseline})</td>
+        <td>${hit.observed === null ? '無資料(感測器離線)' : hit.observed}(基線 ${hit.baseline})</td>
         <td>${hit.ruleThreshold}</td>
         <td>權重 ${hit.weight}</td>
         <td>${hit.triggered ? '✅ 觸發' : '—'}</td>
@@ -54,12 +65,12 @@ export function renderSensing(root: HTMLElement): void {
         <div class="kpi${yieldWarn ? ' warn' : ''}"><span class="kpi-value">${stage.yield}%</span><span class="kpi-label">良率${yieldArrow}</span></div>
         <div class="kpi${temperatureKpi.warn ? ' warn' : ''}"><span class="kpi-value">${s.temperature_c}°C</span><span class="kpi-label">模具溫度${temperatureKpi.arrow}</span></div>
         <div class="kpi${vibrationKpi.warn ? ' warn' : ''}"><span class="kpi-value">${s.vibration_rms}</span><span class="kpi-label">振動 RMS${vibrationKpi.arrow}</span></div>
-        <div class="kpi${currentKpi.warn ? ' warn' : ''}"><span class="kpi-value">${s.current_a}A</span><span class="kpi-label">電流${currentKpi.arrow}</span></div>
+        <div class="kpi${currentKpi.warn ? ' warn' : ''}"><span class="kpi-value">${formatCurrent(s.current_a)}</span><span class="kpi-label">電流${currentKpi.arrow}</span></div>
       </div>
       <div id="twin-mount" class="twin" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
       <div class="edge-card">
         <h2>邊緣異常評分 — 可解釋規則告警</h2>
-        <p>裝置 ${escapeHtml(e.deviceId)}|評分 <strong>${e.score}</strong>(門檻 ${e.threshold})→ ${dispatched ? '觸發告警' : '未觸發'}</p>
+        <p>裝置 ${escapeHtml(e.deviceId)}|評分 <strong>${computedScore}</strong>(門檻 ${e.threshold})→ ${dispatched ? '觸發告警' : '未觸發'}</p>
         <p class="note">時間窗 ${e.windowSeconds} 秒｜遲滯 ${e.hysteresisSeconds} 秒｜${e.suppressed ? '本次已被抑制,不重複派發' : '未被抑制'}｜抑制規則:${escapeHtml(e.suppressionRule)}</p>
         <p class="note">溫度趨勢:${trendText}</p>
         <div class="rule-table-wrap">
@@ -70,7 +81,7 @@ export function renderSensing(root: HTMLElement): void {
             <tbody>${ruleRows}</tbody>
           </table>
         </div>
-        <p class="note">計分方式:${escapeHtml(e.scoring.method)}｜已觸發權重合計 ${e.scoring.rawTriggeredWeightSum} × 感測器品質係數 ${e.scoring.sensorQuality} = ${e.score}</p>
+        <p class="note">計分方式:${escapeHtml(e.scoring.method)}｜即時計算:已觸發權重合計 ${rawTriggeredWeightSum} × 感測器品質係數 ${e.scoring.sensorQuality} = <strong>${computedScore}</strong>${scoreVerified ? '(與裝置回報值一致,已重新驗算)' : `⚠ 與裝置回報值 ${e.score} 不符,請確認資料`}</p>
         <p class="note">感測器品質係數說明:${escapeHtml(e.scoring.sensorQualityNote)}</p>
       </div>
     </section>`
@@ -80,7 +91,7 @@ export function renderSensing(root: HTMLElement): void {
       dotId: 'dot-machine',
       name: SCENARIO_META.station,
       status: stage.status,
-      detail: `模具溫度 ${s.temperature_c}°C${tempDelta ? `(較基線 ${Number(tempDelta) >= 0 ? '+' : ''}${tempDelta}°C)` : ''}｜邊緣評分 ${e.score}(門檻 ${e.threshold})→ ${dispatched ? '觸發告警' : '未觸發'}`,
+      detail: `模具溫度 ${s.temperature_c}°C${tempDelta ? `(較基線 ${Number(tempDelta) >= 0 ? '+' : ''}${tempDelta}°C)` : ''}｜邊緣評分 ${computedScore}(門檻 ${e.threshold})→ ${dispatched ? '觸發告警' : '未觸發'}`,
     },
     ...uninstrumentedStations(),
   ])

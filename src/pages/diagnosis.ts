@@ -32,11 +32,14 @@ export function renderDiagnosis(root: HTMLElement): void {
     .map((item) => `<li><span class="evidence-time">${escapeHtml(item.time)}</span>${escapeHtml(item.description)}</li>`)
     .join('')
 
+  const contentUnreviewed = c.contentReview.status !== 'approved'
+
   root.innerHTML = `
-    <section class="stage stage-critical">
+    <section class="stage stage-${stage.status}">
       <h1>${escapeHtml(stage.label)}</h1>
       <p class="meta">${escapeHtml(SCENARIO_META.line)}|${escapeHtml(SCENARIO_META.station)}|${escapeHtml(stage.time)}|來源:${escapeHtml(c.source)}</p>
       <div id="twin-mount" class="twin twin-mini" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
+      ${contentUnreviewed ? `<p class="content-caveat">⚠ 本卡片內容尚未經內容審核(${REVIEW_LABEL[c.contentReview.status] ?? escapeHtml(c.contentReview.status)}),為 AI 生成之示範建議,現場採用前應由人工覆核,不視為已核准可直接引用的知識。</p>` : ''}
       <div class="diagnosis-card">
         <div class="cell"><h3>推定根因</h3><p>${escapeHtml(c.rootCause)}</p></div>
         <div class="cell"><h3>信心</h3><p>${c.confidence}%</p><p class="note">${escapeHtml(c.confidenceBasis)}</p></div>
