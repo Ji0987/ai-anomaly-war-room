@@ -6,7 +6,7 @@
 |---|--------|------|--------------|
 | 1 | 專案文件完整度 | 15 | docs/ 全套:requirements、architecture、data-model、development-guide、test-plan(內容需依專題持續更新,非 AI 原樣) |
 | 2 | 需求符合度與驗收標準 | 15 | requirements.md 痛點/使用者/REQ 表 + acceptance-criteria.md AC 表 |
-| 3 | 每位組員的實作與 Git 協作紀錄 | 20 | git commit/branch/PR 歷史、Issue 連結;feature→dev→main 流程。**目前缺口**:分工模式(work-package 對照表)已移除,若課程仍要求逐人紀錄,需另外補齊證據 |
+| 3 | 每位組員的實作與 Git 協作紀錄 | 20 | git commit/branch/PR 歷史、Issue 連結;feature→dev→main 流程。**已知缺口(定位已確認,非待決事項)**:專題已定位為「Claude Code 與 Codex 直接協作處理」,不套用個人工作包分配;獨立審查估算本項約 9/20(區間 8-10),對應評分表「少數人完成、無法證明個人實作」一檔。這是定位選擇下的已知取捨,不是需要補文件掩蓋的缺失 |
 | 4 | 頁面設計與操作一致性 | 10 | styles/main.css 設計 token;四頁共用元件樣式與導覽 |
 | 5 | 功能完整度 | 20 | 四頁 + 90 秒導覽 + slider 核心流程可完整操作 |
 | 6 | 功能測試列表與檢核結果 | 10 | test-plan.md + test-results.md(TC 對齊 AC) |

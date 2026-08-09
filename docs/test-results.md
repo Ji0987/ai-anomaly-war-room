@@ -61,7 +61,7 @@
 
 ## 第 3 輪|2026-08-09|AI(Claude Code 委派 Codex/gpt-5.6-terra 實作 + Claude 逐檔審查與瀏覽器驗收)|測試對象 branch:`chore/review-round2-fixes`
 
-> 依第二輪審查報告(`ai-anomaly-war-room-review-精誠雄欣視角.md`)修復。範圍:(1) EVT-003
+> 依第二輪雙視角審查報告(repo 外部文件,不公開)修復。範圍:(1) EVT-003
 > `signals.current_a` 由缺失欄位改明確 `null` 編碼,修復 runtime schema guard 導致的整頁防呆錯誤;
 > (2) baseline/diagnosis/decision 三頁 `<section class="stage stage-xxx">` 由寫死字面量改
 > `stage-${stage.status}` 動態帶入,並補上 main.css 對應樣式(先前是死碼,四種情境中已有三種的顏色
