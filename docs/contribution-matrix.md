@@ -7,7 +7,7 @@
 |------|--------|------|--------|--------|--------------|-----|------------------------|
 | (姓名) | A | 導覽/90 秒導覽 + 離線建置與部署 | | `feature/replay-shell` | | | D 的 PR |
 | (姓名) | B | 數位孿生告警 + 響應式 | | `feature/twin-alert` | | | A 的 PR |
-| (姓名) | C | 六格診斷卡 + 防呆 | | `feature/diagnosis-cards` | | | B 的 PR |
+| M1430714 | C | 六格診斷卡 + 防呆 | [#3](https://github.com/Ji0987/ai-anomaly-war-room/issues/3) | `feature/diagnosis-cards` | [`5098caa`](https://github.com/Ji0987/ai-anomaly-war-room/commit/5098caa) | | B 的 PR |
 | (姓名) | D | 決策與損失 slider + 測試彙整 | | `feature/decision-loss` | | | C 的 PR |
 
 > 注意:此檔為課程繳交用;**競賽送審版文件不得含姓名**(匿名規範),送審前另出無名版。
