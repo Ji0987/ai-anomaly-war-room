@@ -1,0 +1,79 @@
+# TinyML Shadow PoC — H0：振動頻譜可分性
+
+這個資料夾是「AI 生產異常戰情室」的個人硬體加碼展示，用來驗證 TT 馬達在**正常**與**負載**兩種狀態下的振動頻譜是否有肉眼可辨的差異。它不會修改、匯入或影響專題主線的離線 SPA（`src/`）；正式評分交付仍以 SPA 為準。
+
+H0 刻意不做機器學習：若頻譜沒有可分性，就在此停止，不進入 RandomForest 或任何模型訓練。
+
+## 目錄
+
+```text
+hardware/tinyml/
+├─ firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino
+├─ tools/serial_capture.py
+├─ tools/analyze_baseline.py
+├─ requirements.txt
+└─ data/
+   ├─ raw/                 # 本機擷取的 JSONL（不進版控）
+   └─ analysis/            # 本機圖表（不進版控）
+```
+
+## 接線與供電
+
+| 元件 | 連接 |
+| --- | --- |
+| GY-91 VCC | ESP32-S3 3.3V |
+| GY-91 GND | ESP32-S3 GND |
+| GY-91 SCL | ESP32-S3 的 I2C SCL 腳位 |
+| GY-91 SDA | ESP32-S3 的 I2C SDA 腳位 |
+| TT 馬達 | L298P 馬達輸出端（由 L298P 的獨立馬達電源供電） |
+| L298P 馬達電源 GND | **與 ESP32-S3 GND 共地** |
+
+請確認你的開發板實際 I2C 預設腳位，不同廠牌可能不同；程式碼裡有 `Wire.begin(sda, scl)` 可自行指定，**不要假設是固定腳位**。範例韌體預設傳入 `-1, -1` 讓 ESP32 Arduino core 使用該開發板預設值；如需指定，請改檔案最上方的 `I2C_SDA_PIN` 與 `I2C_SCL_PIN`。
+
+TT 馬達必須由 L298P 與其獨立電源驅動。馬達電源地與 ESP32-S3 的 GND 務必共地，但 **ESP32-S3 不要直接供電給馬達**。
+
+## H0 驗收標準
+
+收集的正常與負載 run，在頻譜圖或頻帶功率上是否有肉眼可辨的差異？可先把約 2 倍以上的功率差異視為值得繼續驗證的訊號。
+
+- 有明顯差異：H0 可視為有可分性，可再規劃下一階段特徵/模型實驗。
+- 完全重疊或差異不穩定：H0 未通過，停在此處，不進下一步機器學習。
+
+這是人工判讀閘門；分析程式不會自動宣告通過或失敗。
+
+## 操作步驟
+
+1. 依上表接線，確認 L298P、馬達與 ESP32-S3 已共地；將 `firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino` 燒錄至 ESP32-S3。
+2. 安裝 Python 依賴：`python -m pip install -r hardware/tinyml/requirements.txt`。
+3. 找出序列埠後收集至少三組正常 run 與三組負載 run。每一組執行一次（Windows 範例）：
+
+   ```powershell
+   python hardware/tinyml/tools/serial_capture.py --port COM5 --label normal_pwm150_run1
+   python hardware/tinyml/tools/serial_capture.py --port COM5 --label loaded_pwm150_run1
+   ```
+
+   可用 `--seconds 30` 延長時間。程式會在 `data/raw/` 建立帶時間戳的 `.jsonl` 檔；將 PWM、固定方式、負載形式寫進 label，便於事後比較。
+4. 將六個檔案傳給分析工具；未傳 `--labels` 時會由檔名中的 `normal` 或 `loaded` 推斷標籤：
+
+   ```powershell
+   python hardware/tinyml/tools/analyze_baseline.py --files `
+     hardware/tinyml/data/raw/normal_pwm150_run1_*.jsonl `
+     hardware/tinyml/data/raw/normal_pwm150_run2_*.jsonl `
+     hardware/tinyml/data/raw/normal_pwm150_run3_*.jsonl `
+     hardware/tinyml/data/raw/loaded_pwm150_run1_*.jsonl `
+     hardware/tinyml/data/raw/loaded_pwm150_run2_*.jsonl `
+     hardware/tinyml/data/raw/loaded_pwm150_run3_*.jsonl
+   ```
+
+   PowerShell 的萬用字元若展開方式不符預期，可改為逐一貼上實際檔名。圖表預設存到 `data/analysis/baseline_spectra.png`。
+5. 人工比較正常/負載 run 的頻譜峰值與四個頻帶功率。若沒有清楚、可重現的差異，就記錄 H0 未通過並停止，不進入模型階段。
+
+## 序列協定
+
+韌體使用 115200 baud，每筆資料都是一行 JSON。開機會輸出 `type: status` 的就緒資訊；主機可送：
+
+- `start`：開始連續輸出 1024 點視窗。
+- `stop`：停止輸出。
+- `status`：回報串流狀態與已送出視窗數。
+
+每個資料視窗包含 `sample_rate_hz`（視窗內以實際時間戳計算）和 `ax_g`、`ay_g`、`az_g` 三個 1024 點加速度陣列。因 115200 baud 對完整三軸 JSON 視窗的傳輸會形成視窗間空檔，H0 的比較單位是各個完整視窗的頻譜，不應把相鄰視窗視為無間斷的連續波形。
