@@ -4,6 +4,11 @@
 
 ## 第 1 輪|2026-08-01|AI 技術優化驗證(非各工作包負責人手動驗收)
 
+> ⚠️ **用語已過時(2026-08-09 補註)**:下方「四位組員」「AGENTS.md 三道人工關卡」「工作包負責人」
+> 等說法,對應的治理框架(AGENTS.md、contribution-matrix.md、team-setup.md)已於 2026-08-08
+> commit `55aba34` 整份移除,改為「Claude Code 與 Codex 直接協作處理此專案」。保留原文不覆寫,
+> 僅在此補註避免讀者誤以為該框架仍在運作;細節見 rubric-traceability.md 評分項 3 的已知缺口。
+
 > 本輪由 AI 依審查報告整合改動後執行,涵蓋建置、指令列與瀏覽器互動驗證;
 > **不是**四位組員各自的 AC-理解/操作驗收(AGENTS.md 三道人工關卡),
 > 團隊送交前仍應各自重跑一次自己工作包的項目並簽名記錄。
@@ -25,7 +30,7 @@
 | TC-08a | ✅ | 擴大掃描範圍後(排除 package-lock.json)對全部 git 追蹤檔執行,無命中 |
 | TC-08b | ✅ | `npm audit` 從 1 high(vite)+1 moderate(esbuild)修正為 0 vulnerabilities(升級 vite ^5.4.0→^6.4.3) |
 | TC-08c | ✅ | 第 2 頁規則命中表:已觸發權重合計 0.8 × 感測器品質係數 0.975 = 0.78,與畫面顯示分數一致 |
-| TC-09a | ✅ | EVT-001~004 四種情境皆完整瀏覽四頁,無 JS 例外(console 無錯誤訊息) |
+| TC-09a | ✅ | ⚠️ **已勘誤,見下方「第 3 輪」與勘誤說明,不代表目前仍通過** — EVT-001~004 四種情境皆完整瀏覽四頁,無 JS 例外(console 無錯誤訊息) |
 | TC-09b | ⏭ | 尚未跑展示前總驗收(待團隊決定送審時程後再執行) |
 
 > **勘誤(2026-08-08,對應 PR #6 commit 95ffb8b 之後的審查)**:上表兩列判定已因後續變更/檢視
@@ -34,6 +39,13 @@
 >   已把未設感測資料的三個站點從綠色改成灰色 `unavailable`,原始備註與現況不符。
 > - **TC-06a**:當時只確認 `npm run build:offline` 產出檔案成功,**並未**實際以 `file://` 開啟
 >   單檔操作過任何流程;build 成功不等於離線執行通過,原本標記 ✅ 過於寬鬆。
+
+> **勘誤(2026-08-09,第二輪審查報告發現)**:
+> - **TC-09a**:當時標記 ✅,但 git 考古(commit 255cfd2 的驗證紀錄)顯示實際只瀏覽器實測過
+>   EVT-001/002/004 三種情境,**EVT-003 從未被實際開啟驗證過**。EVT-003 的 sensing 階段
+>   `signals.current_a` 當時整個欄位缺失(非設為 0),導致 runtime schema guard 驗證失敗,
+>   實際畫面顯示「此階段資料無法顯示」防呆錯誤,不是感測缺值情境的內容——與本列「4 種情境皆完整
+>   瀏覽」的判定矛盾。原本標記 ✅ 是未涵蓋 EVT-003 的假陽性,已於下方「第 3 輪」修復並重新驗證。
 
 ## 第 2 輪|2026-08-08|AI(Claude Code,實際以 file:// 開啟離線單檔操作)|測試對象 commit: `95ffb8b`
 
@@ -46,6 +58,30 @@
 | TC-02a | ✅ | 重新產出 dist-offline 後以 `file://` 開啟,DOM 檢查四站點:三號機台 `fill: var(--normal)`、`aria-label: "三號機台:正常,..."`(依階段仍會變黃/紅/綠);原料/換料、品質檢測、包裝三站點皆 `fill: var(--muted)`、`aria-label` 皆為「...:無感測資料,點選查看訊號」,點擊後明細面板顯示「無感測資料:本情境未針對此站點模擬感測數據...」,不再出現「正常」字樣 |
 | TC-06a | ✅ | 實際以 `file:///.../dist-offline/index.html` 開啟(非 `http://localhost`),完整操作:導覽列 1→4 切頁、第 4 頁 slider 拖到 15 分鐘(顯示 NT$1,050,公式正確)、點選未設感測站點查看「無感測資料」明細、第 3 頁診斷卡內容正常顯示。全程 console 無錯誤訊息。**有一項未能驗證**:topbar 情境下拉選單(EVT-001→EVT-002)依賴 `location.search` 觸發整頁重新載入,在目前測試工具的 `file://` 沙盒下,連不帶任何參數變更的原生 `location.reload()` 都不會真的重新載入(以 `window.__marker` 值在呼叫前後不變的方式雙重確認,含另開全新分頁的對照測試),這是測試工具本身對「專案資料夾以外的本機檔案」的限制,不是這次改動或程式碼本身的證據——但我沒有真實桌面瀏覽器可以排除萬一,建議負責人(A)用自己電腦實際雙擊開啟 `dist-offline/index.html` 後,額外測一次情境下拉選單是否正常切換 |
 | TC-06b | ✅ | 同一輪操作全程用瀏覽器網路面板檢查,離線單檔零筆 request(含分頁切換、slider、站點點擊、reload 測試期間) |
+
+## 第 3 輪|2026-08-09|AI(Claude Code 委派 Codex/gpt-5.6-terra 實作 + Claude 逐檔審查與瀏覽器驗收)|測試對象 branch:`chore/review-round2-fixes`
+
+> 依第二輪審查報告(`ai-anomaly-war-room-review-精誠雄欣視角.md`)修復。範圍:(1) EVT-003
+> `signals.current_a` 由缺失欄位改明確 `null` 編碼,修復 runtime schema guard 導致的整頁防呆錯誤;
+> (2) baseline/diagnosis/decision 三頁 `<section class="stage stage-xxx">` 由寫死字面量改
+> `stage-${stage.status}` 動態帶入,並補上 main.css 對應樣式(先前是死碼,四種情境中已有三種的顏色
+> 判定實際是錯的但肉眼看不出來);(3) edge score 由 JSON 預先算好改頁面即時運算(`computeEdgeScore`,
+> 呼應 `computeLoss` 模式);(4) 新增 EVT-005 示範 `suppressed: true`;(5) 診斷卡新增
+> `contentReview` 未審核時的視覺提示;(6) 文件追溯鏈補齊(AC-08b/TC-08d、TC-10a)。
+> 不在本輪範圍:「4 人組」參賽定位與治理證據問題(需使用者自行決定,非工程問題)。
+> 執行分工:JSON/schema/sensing.ts 邏輯委派 Codex(gpt-5.6-terra/high),Claude 逐檔 `git diff`
+> 核對後獨立重跑驗證指令;main.css 視覺樣式與 baseline/diagnosis/decision.ts 由 Claude 直接處理。
+
+| 編號 | 狀態 | 實際結果 / 備註 |
+|------|------|------------------|
+| TC-02a(重驗) | ✅ | 逐一開啟 EVT-002/003/004 的 diagnosis、decision 頁,DOM 檢查 `section.stage` 的 `class` 與 `border-top-color`:EVT-002 diagnosis 現為 `stage-normal`(綠,先前寫死顯示 `stage-critical`,因 main.css 當時無對應樣式規則,肉眼不可見但屬資料契約錯誤);EVT-003 decision 現為 `stage-critical`(紅,先前寫死顯示 `stage-resolved`);EVT-004 diagnosis 現為 `stage-warning`(黃,先前寫死 `stage-critical`)。三個實際不一致案例皆已修正 |
+| TC-07a(新方法) | ✅ | 依新版操作步驟,已用「EVT-003 修復前的實際狀態」作為等價驗證證據:`signals.current_a` 缺失時,`isSignals()` guard 判定失敗,`http://localhost:5173/?event=EVT-003` 的 sensing 頁面實測顯示「此階段資料無法顯示」防呆訊息,其餘三頁不受影響——與預期結果一致。修復後(`current_a` 改明確 `null`)已重新驗證同一頁面改為正常顯示內容,不再觸發此防呆路徑 |
+| TC-08c(重驗) | ✅ | 第 2 頁計分公式行改為「即時計算」:EVT-001 顯示「已觸發權重合計 0.8 × 感測器品質係數 0.975 = 0.78(與裝置回報值一致,已重新驗算)」,EVT-002~005 亦逐一確認即時計算值與 JSON 原宣告分數一致,無數值回歸 |
+| TC-08d(新增) | ✅ | 切至 EVT-005 第 2 頁:規則命中表模具溫度、電流兩項標記「✅ 觸發」,評分 0.8 ≥ 門檻 0.6;主文字顯示「未觸發」並附註「本次已被抑制,不重複派發」,兩者不矛盾,四個既有情境(`suppressed` 皆 `false`)首次有情境示範 `suppressed: true` 生效畫面 |
+| TC-09a(重驗,EVT-001~005) | ✅ | 5 種情境(含新增 EVT-005)× 4 頁,共 20 個頁面組合逐一實際開啟,`read_console_messages(onlyErrors)` 全程無錯誤訊息,無白屏、無資料防呆誤觸發(EVT-003 sensing 已修復為正常內容) |
+| TC-10a(新增) | ✅ | 第 3 頁確認 `contentReview`(內容審核,⏳/✅/❌ 標籤)與 `caseDisposition`(現場處置確認,⏳/✅/↩ 標籤)為獨立顯示欄位,且新增未審核時的 `.content-caveat` 警示文字;第 4 頁確認復機驗證卡顯示目標良率、複檢窗口、目前觀測值(EVT-001「尚未複檢」/EVT-005 同)、重開案條件,標題本身即註明「不等於『已解決』就代表指標已回歸正常」 |
+| TC-05a(部分) | ⏭ | 仍非正式 390×844 實機驗收。但本輪新增 EVT-005 情境標籤過長,在 Browser pane 390×844 下實測發現真實回歸:`document.documentElement.scrollWidth`(433)> `clientWidth`(390),根因是 `#scenario-select` 於 mobile media query 只設 `flex:1` 未設 `min-width:0`,flex 子項預設不會縮小到小於內容最小寬度,長情境標籤撐開整頁橫向捲動。已修正(`main.css` 加 `min-width:0`)並重新量測 EVT-004/EVT-005 頁面,`scrollWidth`=`clientWidth`=390,無橫向捲動;完整四頁+slider 的正式人工驗收仍待負責人於實機執行 |
+| 建置/依賴驗證 | ✅ | `npm run build`(含 `tsc --noEmit`)、`npm run build:offline`、`npm audit` 三項獨立重跑,全部通過,0 vulnerabilities;`dist-offline/index.html` 內容 grep 確認 EVT-005 與新增文案已正確內嵌 |
 
 ## 範例格式(供下一輪測試複製)
 

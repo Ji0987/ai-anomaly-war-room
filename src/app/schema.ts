@@ -10,7 +10,7 @@ export type StageStatus = 'normal' | 'warning' | 'critical' | 'resolved'
 export interface Signals {
   temperature_c: number
   vibration_rms: number
-  current_a: number
+  current_a: number | null
   source: string
 }
 
@@ -23,7 +23,7 @@ export interface RuleHit {
   signal: string
   label: string
   weight: number
-  observed: number
+  observed: number | null
   baseline: number
   ruleThreshold: number
   triggered: boolean
@@ -156,7 +156,7 @@ const isArr = (v: unknown): v is unknown[] => Array.isArray(v)
 const isNullableNum = (v: unknown): v is number | null => v === null || isNum(v)
 
 function isSignals(v: unknown): v is Signals {
-  return isRecord(v) && isNum(v.temperature_c) && isNum(v.vibration_rms) && isNum(v.current_a) && isStr(v.source)
+  return isRecord(v) && isNum(v.temperature_c) && isNum(v.vibration_rms) && isNullableNum(v.current_a) && isStr(v.source)
 }
 
 function isSignalSample(v: unknown): v is SignalSample {
@@ -169,7 +169,7 @@ function isRuleHit(v: unknown): v is RuleHit {
     isStr(v.signal) &&
     isStr(v.label) &&
     isNum(v.weight) &&
-    isNum(v.observed) &&
+    isNullableNum(v.observed) &&
     isNum(v.baseline) &&
     isNum(v.ruleThreshold) &&
     isBool(v.triggered) &&

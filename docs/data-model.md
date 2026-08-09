@@ -35,6 +35,7 @@
 
 `temperature_c / vibration_rms / current_a / source`,`source` 一律標註
 `raw_sensor(模擬)`。
+`current_a` 可為 `null`,代表感測器當下離線、無法讀值,與觀測值恰好是 0 安培是兩件不同的事,兩者不得用同一種寫法表示。
 
 ## edge(出現於 sensing)——可解釋規則評分,不是裝飾數字
 
@@ -78,12 +79,13 @@
 
 ## 情境庫(不是只有一個戲劇化的成功案例)
 
-`src/data/scenarios/index.ts` 目前內嵌四種情境,建置時全部靜態 import(呼應「無 runtime
+`src/data/scenarios/index.ts` 目前內嵌五種情境,建置時全部靜態 import(呼應「無 runtime
 fetch」的離線決策),topbar 下拉選單以 `?event=EVT-00x` 切換:
 
 | eventId | scenarioType | 用途 |
 |---------|--------------|------|
 | EVT-001 | confirmed_anomaly | 主線案例:確診異常,完整規則命中 + 診斷 + 待復機驗證 |
 | EVT-002 | normal_noise | 訊號小幅波動但未跨門檻,示範「為什麼沒有觸發」 |
-| EVT-003 | sensor_dropout | `sensing.signals` 故意缺 `current_a`,即時展示 REQ-07 防呆(非人工刪欄位測試) |
+| EVT-003 | sensor_dropout | 電流感測器於 T+8 離線,`current_a` 以 `null` 明確標記缺值(不是省略欄位、也不是觀測值 0),示範真實的感測資料品質分級情境 |
 | EVT-004 | suspected_false_positive | 評分壓線超標,診斷卡標記疑似誤報、人工複判退回 |
+| EVT-005 | repeat_alert_suppressed | 60 秒遲滯窗口內第二次評分,示範 `suppressed: true` 抑制生效、不重複派工,規則命中表仍可見達門檻的訊號 |

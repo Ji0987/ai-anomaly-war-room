@@ -1,0 +1,120 @@
+{
+  "eventId": "EVT-005",
+  "scenarioType": "repeat_alert_suppressed",
+  "scenarioLabel": "重複告警抑制",
+  "line": "二號產線",
+  "station": "三號機台",
+  "summary": "60 秒遲滯窗口內第二次評分仍超過門檻,依抑制規則不重複派工",
+  "materialChangeEvent": { "time": "T+0", "description": "原料批號 LOT-2606 換料" },
+  "stages": [
+    {
+      "id": "baseline",
+      "label": "正常基線|全域感知",
+      "time": "T-10",
+      "yield": 98.0,
+      "status": "normal",
+      "signals": { "temperature_c": 62.0, "vibration_rms": 0.30, "current_a": 3.90, "source": "raw_sensor(模擬)" }
+    },
+    {
+      "id": "sensing",
+      "label": "異常事件|邊緣告警(遲滯窗口內第二次評分,已抑制)",
+      "time": "T+8",
+      "yield": 94.6,
+      "status": "warning",
+      "signals": { "temperature_c": 71.0, "vibration_rms": 0.41, "current_a": 4.55, "source": "raw_sensor(模擬)" },
+      "edge": {
+        "deviceId": "EDGE-03",
+        "score": 0.8,
+        "threshold": 0.6,
+        "windowSeconds": 300,
+        "hysteresisSeconds": 60,
+        "suppressed": true,
+        "suppressionRule": "同裝置同分數 60 秒內不重複派發告警,避免抖動誤報",
+        "trend": [
+          { "time": "T+2", "temperature_c": 64.5 },
+          { "time": "T+5", "temperature_c": 67.8 },
+          { "time": "T+8", "temperature_c": 71.0 }
+        ],
+        "ruleHits": [
+          {
+            "signal": "temperature_c",
+            "label": "模具溫度",
+            "weight": 0.5,
+            "observed": 71.0,
+            "baseline": 62.0,
+            "ruleThreshold": 70.0,
+            "triggered": true,
+            "note": "首次告警已於 T+8 派發,本次為遲滯窗口(60 秒)內第二次評分,溫度仍超過警戒值"
+          },
+          {
+            "signal": "current_a",
+            "label": "電流",
+            "weight": 0.3,
+            "observed": 4.55,
+            "baseline": 3.90,
+            "ruleThreshold": 4.40,
+            "triggered": true,
+            "note": "電流仍超過額定值,與首次評分同一根因,非新增異常"
+          },
+          {
+            "signal": "vibration_rms",
+            "label": "振動",
+            "weight": 0.2,
+            "observed": 0.41,
+            "baseline": 0.30,
+            "ruleThreshold": 0.45,
+            "triggered": false,
+            "note": "尚未超過振動門檻"
+          }
+        ],
+        "scoring": {
+          "method": "score = Σ(已觸發規則權重) × 感測器品質係數,四捨五入至小數點後 2 位",
+          "sensorQuality": 1.0,
+          "sensorQualityNote": "本次評分時感測器皆在校正有效期內,品質係數不打折",
+          "rawTriggeredWeightSum": 0.8
+        },
+        "source": "edge(規則評分)"
+      }
+    },
+    {
+      "id": "diagnosis",
+      "label": "現場知識診斷|AI 老師傅卡",
+      "time": "T+20",
+      "yield": 91.5,
+      "status": "warning",
+      "card": {
+        "verdict": "duplicate_of_dispatched_alert",
+        "rootCause": "與 T+8 首次告警同一根因(換料後模具溫控參數未同步),本次評分為抑制窗口內的重複觸發,非新事件",
+        "confidence": 80,
+        "confidenceBasis": "規則命中訊號與首次告警一致(溫度、電流同步偏高),且落在同裝置 60 秒遲滯窗口內,判定為同一案件延續",
+        "evidence": [
+          { "time": "T+8", "description": "首次告警已於 T+8 派發並開案,本次評分於遲滯窗口內再次超過門檻", "metric": "temperature_c", "value": 71.0 },
+          { "time": "T+8", "description": "電流訊號與首次評分同步偏高,較基線 +0.65A", "metric": "current_a", "value": 4.55 },
+          { "time": "T+20", "description": "良率延續首次告警後的下降趨勢,由 98.0% 降至 91.5%,與新增異常無關", "metric": "yield_pct", "value": 91.5 }
+        ],
+        "knowledge": "設備 SOP v3.2 §4.3 遲滯窗口內重複評分處置原則",
+        "action": "沿用首次告警(T+8)已派工項目,本次不重複開立新案,僅記錄於同一案件時間軸",
+        "contentReview": { "status": "pending", "reviewer": "", "reviewedAt": "" },
+        "caseDisposition": { "status": "confirmed", "actor": "值班人員", "actedAt": "2026-08-01T09:55:00+08:00", "note": "確認為首次告警(T+8)的抑制窗口內重複評分,沿用原案處置,不重複派工" },
+        "provenance": { "cardVersion": "v1.0", "knowledgeVersion": "SOP v3.2", "modelId": "dify-flow:diagnosis-card-v1", "promptId": "diagnosis-6cell-v1" },
+        "source": "diagnosis(Dify 預生成)"
+      }
+    },
+    {
+      "id": "decision",
+      "label": "根因閉環|證據、處置與止損",
+      "time": "T+30",
+      "yield": 91.5,
+      "status": "resolved",
+      "truth": "與 T+8 首次告警同一根因;60 秒遲滯窗口內第二次評分依抑制規則未重複派工,避免同一異常被算成兩案",
+      "loss": { "unitsPerMinute": 40, "defectRateDelta": 0.065, "costPerDefect": 25, "source": "loss(what-if 假設模型)" },
+      "recovery": {
+        "status": "pending_recheck",
+        "targetYieldPct": 97,
+        "observedYieldAtCheckPct": null,
+        "checkWindowMinutes": 30,
+        "reopenCondition": "復機後 30 分鐘內良率未回升至 97% 以上,自動重開案並通知複判"
+      }
+    }
+  ]
+}

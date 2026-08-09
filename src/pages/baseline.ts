@@ -13,7 +13,7 @@ export function renderBaseline(root: HTMLElement): void {
   }
   const s = stage.signals
   root.innerHTML = `
-    <section class="stage stage-normal">
+    <section class="stage stage-${stage.status}">
       <h1>${escapeHtml(stage.label)}</h1>
       <p class="meta">${escapeHtml(SCENARIO_META.line)}|${escapeHtml(SCENARIO_META.station)}|${escapeHtml(stage.time)}|來源:${escapeHtml(s.source)}</p>
       <div class="kpi-row">

@@ -27,7 +27,7 @@ export function renderDecision(root: HTMLElement): void {
   const state = loadState()
 
   root.innerHTML = `
-    <section class="stage stage-resolved">
+    <section class="stage stage-${stage.status}">
       <h1>${escapeHtml(stage.label)}</h1>
       <p class="meta">${escapeHtml(SCENARIO_META.line)}|${escapeHtml(SCENARIO_META.station)}|${escapeHtml(stage.time)}|來源:${escapeHtml(stage.loss.source)}</p>
       <div id="twin-mount" class="twin twin-mini" role="group" aria-label="產線數位孿生視圖,可點選站點查看訊號"></div>
