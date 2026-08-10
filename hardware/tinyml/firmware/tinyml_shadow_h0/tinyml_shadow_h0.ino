@@ -9,9 +9,11 @@
   - PWR_MGMT_1 is 0x6B, ACCEL_CONFIG is 0x1C, and accel output starts at 0x3B.
   - ACCEL_CONFIG value 0x08 selects +/-4 g. Under the standard MPU9250 mapping,
     +/-4 g sensitivity is 8192 LSB/g, so acceleration_g = signed_raw / 8192.0.
-  - I2C pins are left as -1/-1 to use the ESP32 Arduino core's board defaults.
-    Set I2C_SDA_PIN and I2C_SCL_PIN to real pin numbers when your board requires
-    it; do not assume a fixed pair of I2C pins across ESP32-S3 boards.
+  - I2C pins are set to GPIO8 (SDA) / GPIO9 (SCL), confirmed from the ATK-
+    DNESP32S3M-MiniBoard's labeled pinout diagram (both are broken out on the
+    header) and matching the arduino-esp32 core's own ESP32-S3 Dev Module I2C
+    defaults. If you flash a different ESP32-S3 board, check its pinout before
+    trusting these two numbers — do not assume they hold across boards.
   - Sampling is scheduled with micros() against an advancing target timestamp,
     rather than delay(), to avoid cumulative delay error. When a deadline is
     missed (for example while JSON is sent at 115200 baud), missed ticks are
@@ -27,8 +29,8 @@ constexpr uint8_t REG_ACCEL_CONFIG = 0x1C;
 constexpr uint8_t REG_ACCEL_XOUT_H = 0x3B;
 constexpr uint8_t REG_WHO_AM_I = 0x75;
 
-constexpr int I2C_SDA_PIN = -1;  // Replace with your board's SDA GPIO if needed.
-constexpr int I2C_SCL_PIN = -1;  // Replace with your board's SCL GPIO if needed.
+constexpr int I2C_SDA_PIN = 8;  // ATK-DNESP32S3M-MiniBoard: confirmed on header, see file header note.
+constexpr int I2C_SCL_PIN = 9;  // Same board; change both if you flash different hardware.
 constexpr uint32_t I2C_CLOCK_HZ = 400000;
 
 constexpr size_t WINDOW_SAMPLES = 1024;
@@ -192,7 +194,7 @@ void pollSerialCommands() {
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Change pins above if your ESP32-S3 needs explicit pins.
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // GPIO8/9 for ATK-DNESP32S3M-MiniBoard; edit above for other boards.
   Wire.setClock(I2C_CLOCK_HZ);
 
   const bool wakeOk = writeRegister(REG_PWR_MGMT_1, 0x00);

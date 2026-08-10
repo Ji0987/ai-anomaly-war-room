@@ -1,6 +1,8 @@
 # 給新 session 的執行清單
 
 > 如果你是一個剛開始接手的 AI session(不知道之前的討論脈絡),讀完這份文件應該就有足夠上下文動手。這是「AI 生產異常戰情室」專題的個人硬體加碼展示(TinyML Shadow PoC),獨立於 `src/` 下的離線 SPA 正式交付——不要動 `src/`、`docs/`、`.github/` 或專案根目錄設定檔。
+>
+> 完整材料表(含已有零件、建議採購、開發板型號細節)見 [`BOM.md`](BOM.md),本文件只講操作步驟。
 
 ## 現況(已完成,不用重做)
 
@@ -22,12 +24,12 @@ ESP-IDF 更強大(FreeRTOS 精細控制、I2S DMA、ESP-DSP 硬體優化 FFT),�
 
 步驟:
 1. Arduino IDE → Boards Manager 裝 ESP32 套件 → 選板子「ESP32S3 Dev Module」
-2. 開啟 `firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino`,上傳
-3. 開序列埠監控視窗(115200 baud),確認開機有印出 `{"type":"status",...}`,檢查 `who_am_i` 欄位——MPU9250 應回 `0x71`(113),MPU6500 clone 應回 `0x70`(112)。如果讀到別的值或讀取失敗,先查 I2C 接線和 `I2C_SDA_PIN`/`I2C_SCL_PIN`(檔案開頭,預設 `-1,-1` 用開發板預設值,若你的板子不支援這個寫法就要自己查腳位手動指定)
+2. 開啟 `firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino`,上傳(接開發板標示「USB SERIAL」的那個 micro-USB 埠,不是「USB SLAVE」)
+3. 開序列埠監控視窗(115200 baud),確認開機有印出 `{"type":"status",...}`,檢查 `who_am_i` 欄位——MPU9250 應回 `0x71`(113),MPU6500 clone 應回 `0x70`(112)。如果讀到別的值或讀取失敗,先查 GY-91 接線(GPIO8=SDA、GPIO9=SCL,已在韌體裡寫死,見 `BOM.md`)
 
 ## 第二步:接線
 
-見 `README.md` 的接線表。重點提醒:TT 馬達由 L298P 獨立電源驅動,**電源地要跟 ESP32-S3 共地**,但 ESP32-S3 不要直接供電給馬達。
+見 `README.md` 的接線表與 `BOM.md` 的完整材料表。重點提醒:TT 馬達由 L298P 獨立電源驅動,**電源地要跟 ESP32-S3 共地**,但 ESP32-S3 不要直接供電給馬達;GY-91 的 I2C 接 GPIO8(SDA)/GPIO9(SCL)。
 
 ## 第三步:跑 H0
 

@@ -2,6 +2,8 @@
 
 這個資料夾是「AI 生產異常戰情室」的個人硬體加碼展示，用來驗證 TT 馬達在**正常**與**負載**兩種狀態下的振動頻譜是否有肉眼可辨的差異。它不會修改、匯入或影響專題主線的離線 SPA（`src/`）；正式評分交付仍以 SPA 為準。
 
+開發板已確認型號與接線細節，完整材料表見 [`BOM.md`](BOM.md)。
+
 H0 刻意不做機器學習：若頻譜沒有可分性，就在此停止，不進入 RandomForest 或任何模型訓練。
 
 ## 目錄
@@ -19,18 +21,22 @@ hardware/tinyml/
 
 ## 接線與供電
 
+開發板為 [ATK-DNESP32S3M-MiniBoard](https://github.com/openedv/ATK-DNESP32S3M-MiniBoard)，以下腳位已對照官方接腳圖核實。
+
 | 元件 | 連接 |
 | --- | --- |
 | GY-91 VCC | ESP32-S3 3.3V |
 | GY-91 GND | ESP32-S3 GND |
-| GY-91 SCL | ESP32-S3 的 I2C SCL 腳位 |
-| GY-91 SDA | ESP32-S3 的 I2C SDA 腳位 |
+| GY-91 SCL | ESP32-S3 **GPIO9** |
+| GY-91 SDA | ESP32-S3 **GPIO8** |
 | TT 馬達 | L298P 馬達輸出端（由 L298P 的獨立馬達電源供電） |
 | L298P 馬達電源 GND | **與 ESP32-S3 GND 共地** |
 
-請確認你的開發板實際 I2C 預設腳位，不同廠牌可能不同；程式碼裡有 `Wire.begin(sda, scl)` 可自行指定，**不要假設是固定腳位**。範例韌體預設傳入 `-1, -1` 讓 ESP32 Arduino core 使用該開發板預設值；如需指定，請改檔案最上方的 `I2C_SDA_PIN` 與 `I2C_SCL_PIN`。
+韌體已把 `I2C_SDA_PIN`/`I2C_SCL_PIN` 寫死為 8、9（對應這塊板子）。**如果換成別的 ESP32-S3 開發板，先查該板子自己的接腳圖再改這兩個常數，不要假設所有板子都一樣。**
 
 TT 馬達必須由 L298P 與其獨立電源驅動。馬達電源地與 ESP32-S3 的 GND 務必共地，但 **ESP32-S3 不要直接供電給馬達**。
+
+**燒錄用哪個 USB 埠**：這塊板子有兩個 micro-USB 埠，標示「USB SERIAL」的那個（經 CH34x 晶片）才是燒錄/序列埠，不要用標示「USB SLAVE」的原生 USB 埠。
 
 ## H0 驗收標準
 
