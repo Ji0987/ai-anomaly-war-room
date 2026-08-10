@@ -29,12 +29,15 @@ hardware/tinyml/
 | GY-91 GND | ESP32-S3 GND |
 | GY-91 SCL | ESP32-S3 **GPIO9** |
 | GY-91 SDA | ESP32-S3 **GPIO8** |
-| TT 馬達 | L298P 馬達輸出端（由 L298P 的獨立馬達電源供電） |
-| L298P 馬達電源 GND | **與 ESP32-S3 GND 共地** |
+| TT 馬達 | L298N 馬達輸出端（由 L298N 的獨立馬達電源供電） |
+| L298N IN 腳 | ESP32-S3 任一可用 PWM GPIO（避開 GPIO8/9、GPIO35-37） |
+| L298N 電源 GND | **與 ESP32-S3 GND 共地** |
 
 韌體已把 `I2C_SDA_PIN`/`I2C_SCL_PIN` 寫死為 8、9（對應這塊板子）。**如果換成別的 ESP32-S3 開發板，先查該板子自己的接腳圖再改這兩個常數，不要假設所有板子都一樣。**
 
-TT 馬達必須由 L298P 與其獨立電源驅動。馬達電源地與 ESP32-S3 的 GND 務必共地，但 **ESP32-S3 不要直接供電給馬達**。
+TT 馬達必須由 L298N 與其獨立電源驅動。馬達電源地與 ESP32-S3 的 GND 務必共地，但 **ESP32-S3 不要直接供電給馬達**。完整採購清單見 [`BOM.md`](BOM.md)。
+
+**H0 的「負載」不用自動化機構**：拿橡皮擦或氈布之類的材料，錄 loaded run 時用手壓著頂住轉動中的馬達軸或外殼即可，模擬機構（舵機自動加壓）留到 H0 過關、要做正式可重複實驗時再考慮。
 
 **燒錄用哪個 USB 埠**：這塊板子有兩個 micro-USB 埠，標示「USB SERIAL」的那個（經 CH34x 晶片）才是燒錄/序列埠，不要用標示「USB SLAVE」的原生 USB 埠。
 
@@ -49,7 +52,7 @@ TT 馬達必須由 L298P 與其獨立電源驅動。馬達電源地與 ESP32-S3 
 
 ## 操作步驟
 
-1. 依上表接線，確認 L298P、馬達與 ESP32-S3 已共地；將 `firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino` 燒錄至 ESP32-S3。
+1. 依上表接線，確認 L298N、馬達與 ESP32-S3 已共地；將 `firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino` 燒錄至 ESP32-S3。
 2. 安裝 Python 依賴：`python -m pip install -r hardware/tinyml/requirements.txt`。
 3. 找出序列埠後收集至少三組正常 run 與三組負載 run。每一組執行一次（Windows 範例）：
 
