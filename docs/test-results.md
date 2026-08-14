@@ -83,6 +83,36 @@
 | TC-05a(部分) | ⏭ | 仍非正式 390×844 實機驗收。但本輪新增 EVT-005 情境標籤過長,在 Browser pane 390×844 下實測發現真實回歸:`document.documentElement.scrollWidth`(433)> `clientWidth`(390),根因是 `#scenario-select` 於 mobile media query 只設 `flex:1` 未設 `min-width:0`,flex 子項預設不會縮小到小於內容最小寬度,長情境標籤撐開整頁橫向捲動。已修正(`main.css` 加 `min-width:0`)並重新量測 EVT-004/EVT-005 頁面,`scrollWidth`=`clientWidth`=390,無橫向捲動;完整四頁+slider 的正式人工驗收仍待負責人於實機執行 |
 | 建置/依賴驗證 | ✅ | `npm run build`(含 `tsc --noEmit`)、`npm run build:offline`、`npm audit` 三項獨立重跑,全部通過,0 vulnerabilities;`dist-offline/index.html` 內容 grep 確認 EVT-005 與新增文案已正確內嵌 |
 
+## 第 4 輪|2026-08-12|AI(Claude Code)於工作包 A 負責人本機實測|測試對象 branch:`feature/replay-shell`
+
+> 補齊 REQ-01 導覽/90 秒導覽自第 1~3 輪起始終掛在 ⏭ 的三條(TC-01a/01b/01c),並回應第 2 輪
+> TC-06a 留給負責人(A)的那項未決疑問。
+>
+> **執行環境(與前三輪的差別)**:Windows 11 家用桌機 + 本機安裝的 **桌面版 Google Chrome**
+> (以 Playwright `channel: 'chrome'` 驅動真實瀏覽器,非測試工具內建 Browser pane),
+> 測試對象是實際 `npm run build:offline` 產出的 `dist-offline/index.html`,以真正的
+> `file:///c:/.../dist-offline/index.html` 開啟。第 2 輪無法排除的 `file://` 沙盒限制在此環境不存在。
+>
+> **仍須誠實標註**:執行者是 AI,不是負責人本人坐在電腦前手動點擊;本輪提供的是可重現的
+> 自動化操作與量測數據(腳本與原始輸出見 PR 說明),不取代展示前的人工總驗收(TC-09b)。
+>
+> **量測注意事項**:首次量測 TC-01b 時,瀏覽器視窗未取得焦點,Chrome 對背景/被遮蔽視窗的
+> `setTimeout` 節流使計時數據失真(量到 1.81 秒的假性失敗)。已改為 headless + 停用背景計時節流
+> (`--disable-background-timer-throttling` 等)後重測,數據才穩定可信 —— 這是量測環境問題,
+> 不是程式缺陷,記錄於此避免後人重踩。
+
+| 編號 | 狀態 | 實際結果 / 備註 |
+|------|------|------------------|
+| TC-01a | ✅ | 依序點擊導覽列 1→4,四頁 `location.hash` 分別為 `#/baseline`、`#/sensing`、`#/diagnosis`、`#/decision`,`#app h1` 依序為「正常基線\|全域感知」「異常事件\|邊緣告警」「現場知識診斷\|AI 老師傅卡」「根因閉環\|證據、處置與止損」;每頁 `.nav-btn.active` 皆恰好 1 個且 `data-stage` 與當前頁一致(無多重高亮/高亮殘留) |
+| TC-01b | ✅ | **修正後**通過。完整導覽實測總時長 **90.11 秒**(規格 90±5),換頁時間點 `#/sensing@15.02s → #/diagnosis@35.02s → #/decision@65.05s`,結束後按鈕自動復原為「▶ 90 秒導覽」。暫停:播放中按鈕為「⏸ 暫停導覽」,按下後變回「▶ 90 秒導覽」,續抱 25 秒(第 1 頁停留時間僅 15 秒)期間 `hashchange` 事件數 = 0,確認暫停後不會自動換頁 |
+| TC-01b(邊界,修正前的實際缺陷) | ❌→✅ | 修正前:從第 3 頁按「90 秒導覽」只走 2 頁、55.11 秒;**從第 4 頁按下時按鈕顯示「⏸ 暫停導覽」卻空轉 25 秒完全不換頁**——第 4 頁正是前一輪導覽結束後的停留位置,展示日連續講兩次必然踩到。根因:`play()` 以當前頁索引起算 `schedule(indexOf(currentStageId()))`。已修正為導覽固定自第 1 頁開始;重測兩種起點皆為 `#/baseline@0s → #/sensing@15s → #/diagnosis@35.02s → #/decision@65.02s`,總時長 90.10 / 90.11 秒,四頁走完 |
+| TC-01c | ✅ | 第 4 頁把 slider 拉到 18 分鐘(顯示 18 分、NT$ 1,260)後按「重設」:`location.hash` 回到 `#/baseline`、`.nav-btn.active` 為 baseline、`#app h1` 為「正常基線\|全域感知」;再切回第 4 頁確認 slider `value=0`、顯示 0 分、NT$ 0,localStorage 內的 `delayMinutes` 已清除 |
+| TC-06a | ✅ | 以真實 `file://` 開啟離線單檔完成全流程:四頁切換、slider、重設、90 秒導覽全數正常。**並已補上第 2 輪留給負責人(A)的未決項——topbar 情境下拉選單在 `file://` 下確實可正常切換**:EVT-001→EVT-002(`location.search` 變為 `?event=EVT-002`,badge 顯示「EVT-002・正常巡檢…」)、EVT-002→EVT-005(`?event=EVT-005`,badge 顯示「EVT-005・重複告警抑制…」)、EVT-005→EVT-001(回到預設,`search` 清空為 `""`,`select.value=EVT-001`,badge 顯示「EVT-001・確診異常…」)。第 2 輪懷疑的 `location.search` 整頁重載失效,確認是當時測試工具的沙盒限制,不是程式問題 |
+| TC-06b | ✅ | 整場 session(含四頁切換、90 秒完整導覽、slider、重設、三次情境切換重載)以 `page.on('request')` 全程錄製,`http(s)` 開頭的 runtime 請求數 = **0**;同場 `console.error` = 0、未捕捉例外 = 0 |
+| GitHub Pages 部署 | ✅ | `https://ji0987.github.io/ai-anomaly-war-room/` 實際以瀏覽器開啟,HTTP **200**,`waitUntil: networkidle` 後導覽列 4 顆按鈕、badge、第 1 頁 h1 皆正常渲染,`requestfailed` = 0;對應 workflow run 為 `Deploy GitHub Pages` on `main`(最近一次 success)。截圖見 `docs/screenshots/github-pages-deploy.png` |
+| 建置驗證 | ✅ | 修正後重跑 `npm run build`(含 `tsc --noEmit`)與 `npm run build:offline`,皆無錯誤;`npm ci` 回報 0 vulnerabilities |
+| TC-05a | ⏭ | 仍非正式人工實機驗收(屬工作包 B)。本輪順手記錄:390×844 viewport 下第 4 頁 `document.documentElement.scrollWidth` = `clientWidth` = **390**,無橫向捲動,slider=15 顯示 NT$ 1,050(15×40×0.07×25,公式相符);截圖見 `docs/screenshots/mobile-390-decision.png` |
+
 ## 範例格式(供下一輪測試複製)
 
 ### 第 N 輪|日期|執行者|commit: `xxxxxxx`
