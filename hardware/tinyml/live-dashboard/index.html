@@ -1,0 +1,1579 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EEP 夾爪 — 即時儀表板</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #131c2e;
+    --panel-border: #24314a;
+    --text: #e8edf7;
+    --text-dim: #8fa0bd;
+    --accent: #4f8ef7;
+    --ok: #22b8a6;
+    --warn: #e0a730;
+    --bad: #e0574f;
+    --idle: #5a6a88;
+    --ax: #e0574f;
+    --ay: #22b8a6;
+    --az: #4f8ef7;
+    --cur: #c37bf0;
+    --mono: "Cascadia Code", "Consolas", "SFMono-Regular", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Noto Sans TC", system-ui, sans-serif;
+    padding: 20px;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  h1 { font-size: 1.4rem; margin: 0; }
+  .scope-note {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    max-width: 100%;
+  }
+  .unsupported {
+    display: none;
+    background: #3a1c1c;
+    border: 1px solid var(--bad);
+    color: #ffd9d6;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+    line-height: 1.6;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 16px;
+    margin-top: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .col { display: flex; flex-direction: column; gap: 16px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 0.95rem;
+    margin: 0 0 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel h2 .hint { text-transform: none; letter-spacing: normal; font-size: 0.75rem; }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--idle);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+  }
+  .status-dot.connecting { background: var(--warn); }
+  .status-dot.streaming { background: var(--ok); }
+  .status-dot.stopped { background: var(--accent); }
+  .status-dot.error, .status-dot.disconnected { background: var(--bad); }
+  .status-dot.mock { background: var(--cur); }
+  .status-text { font-size: 1rem; font-weight: 600; }
+  .status-detail { font-size: 0.8rem; color: var(--text-dim); }
+  button {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--panel-border);
+    background: #1b2740;
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #06101f; font-weight: 600; }
+  button.warnbtn { background: var(--warn); border-color: var(--warn); color: #241a00; font-weight: 600; }
+  button.small { padding: 5px 9px; font-size: 0.78rem; }
+  button.toggled { border-color: var(--cur); color: var(--cur); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  label.switch-row {
+    display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim);
+    margin-bottom: 12px; cursor: pointer;
+  }
+  dl.meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 10px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+  dl.meta dt { color: var(--text-dim); }
+  dl.meta dd { margin: 0; text-align: right; }
+  .banner {
+    display: none;
+    margin-top: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    background: #3a2a12;
+    border: 1px solid var(--warn);
+    color: #ffe2b0;
+  }
+  .banner.stale { display: block; }
+  .banner.mock-banner {
+    display: block;
+    background: #2a1e3a;
+    border-color: var(--cur);
+    color: #e6d4ff;
+  }
+  canvas { width: 100%; display: block; background: #0d1626; border-radius: 8px; }
+  canvas.wave { height: 220px; }
+  canvas.sparkline { height: 60px; }
+  canvas.kin { height: 320px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 0.82rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  table.stats { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 0.85rem; }
+  table.stats th, table.stats td {
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--panel-border);
+    font-family: var(--mono);
+  }
+  table.stats th:first-child, table.stats td:first-child { text-align: left; font-family: inherit; }
+  table.stats thead th { color: var(--text-dim); font-weight: 500; }
+  .log {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--text-dim);
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 10px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .servo-row {
+    display: grid;
+    grid-template-columns: 64px 1fr 80px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .servo-row label { font-size: 0.85rem; color: var(--text-dim); }
+  .servo-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .servo-row .servo-val { font-family: var(--mono); font-size: 0.78rem; text-align: right; }
+  .servo-row .servo-val .off { color: var(--text-dim); }
+  .servo-row .servo-val .on { color: var(--ok); }
+  .kin-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .kin-inputs label { display: flex; flex-direction: column; gap: 3px; }
+  .kin-inputs input, .kin-inputs select {
+    font: inherit;
+    font-family: var(--mono);
+    background: #0d1626;
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    color: var(--text);
+    padding: 5px 6px;
+  }
+  .temp-readout { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; }
+  .temp-readout .big { font-family: var(--mono); font-size: 1.8rem; font-weight: 600; }
+  .temp-readout .unit { color: var(--text-dim); font-size: 0.85rem; }
+
+  /* Control-only view: toggled on <body> so the servo panel can be used as a
+     standalone, mobile-friendly page without a second Web Serial connection
+     (a port can only be open in one place at a time) or duplicated DOM/state
+     -- see the "獨立控制頁" note in the servo panel. */
+  body.control-only .grid { grid-template-columns: 1fr; }
+  body.control-only header .scope-note,
+  body.control-only .unsupported,
+  body.control-only .col > .panel:not(#servo-panel) { display: none; }
+  body.control-only #servo-panel { font-size: 1.15rem; max-width: 480px; margin: 0 auto; }
+  body.control-only .servo-row { grid-template-columns: 74px 1fr 110px; gap: 14px; margin-bottom: 22px; }
+  body.control-only .servo-row input[type="range"] { height: 34px; }
+  body.control-only button { padding: 14px 16px; font-size: 1rem; }
+  body.control-only .servo-val { font-size: 0.95rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EEP 夾爪 — 即時儀表板</h1>
+  <div class="scope-note">獨立展示頁面，資料直接來自 USB 連接的 ESP32-S3（<code>eep_gripper_h1.ino</code>），不經過、不影響評分用的離線 SPA(<code>src/</code>)</div>
+</header>
+
+<div class="unsupported" id="unsupported">
+  <strong>此瀏覽器不支援 Web Serial API。</strong><br />
+  請改用 <strong>Chrome 或 Edge</strong>，並確認這個頁面是透過
+  <code>http://localhost</code>（本機伺服器）開啟，<strong>不要用 file:// 雙擊開啟</strong>——
+  Web Serial 需要 secure context，file:// 不保證可用。<br />
+  在 <code>hardware/tinyml/live-dashboard/</code> 目錄下執行：<code>python -m http.server 8081</code>，
+  再開 <code>http://localhost:8081</code>。<br />
+  沒有瀏覽器支援也沒關係——右側「模擬模式」開關不需要 Web Serial，可以先看介面長什麼樣。
+</div>
+
+<div class="grid">
+  <div class="col">
+    <section class="panel" id="control-panel">
+      <h2>連線與控制</h2>
+      <div class="status-row">
+        <span class="status-dot" id="statusDot"></span>
+        <div>
+          <div class="status-text" id="statusText">尚未連接</div>
+          <div class="status-detail" id="statusDetail">點「連接裝置」選擇 ESP32-S3 的序列埠，或開「模擬模式」</div>
+        </div>
+      </div>
+      <label class="switch-row">
+        <input type="checkbox" id="mockToggle" />
+        模擬模式（沒有硬體/元件缺件時，用假資料驅動整個介面）
+      </label>
+      <div class="btn-row">
+        <button class="primary" id="btnConnect">連接裝置</button>
+        <button id="btnStart" disabled>開始擷取 (start)</button>
+        <button id="btnStop" disabled>停止 (stop)</button>
+        <button id="btnQuery" disabled>查詢狀態 (status)</button>
+        <button id="btnDisconnect" disabled>中斷連線</button>
+      </div>
+      <div class="banner" id="staleBanner">⚠ 已超過預期時間沒有收到新視窗，資料可能已中斷（序列埠斷線或韌體停止串流）</div>
+      <h2 style="margin-top:18px;">韌體回報狀態</h2>
+      <dl class="meta">
+        <dt>state</dt><dd id="fwState">—</dd>
+        <dt>gy91_ready</dt><dd id="fwGy91Ready">—</dd>
+        <dt>pca9685_ready</dt><dd id="fwPcaReady">—</dd>
+        <dt>timeout guard</dt><dd id="fwTimeoutGuard">—</dd>
+        <dt>streaming</dt><dd id="fwStreaming">—</dd>
+        <dt>windows received（本頁）</dt><dd id="pageWindowsReceived">0</dd>
+        <dt>sample_rate_hz</dt><dd id="fwSampleRate">—</dd>
+        <dt>最後更新</dt><dd id="lastUpdate">—</dd>
+        <dt>無法解析的行數</dt><dd id="malformedCount">0</dd>
+      </dl>
+      <div class="log" id="log"></div>
+    </section>
+
+    <section class="panel" id="servo-panel">
+      <h2>伺服角度控制 <span class="hint" id="servoTimeoutHint"></span></h2>
+      <div class="btn-row">
+        <button class="small" id="btnControlView">📱 獨立控制頁（適合手機）</button>
+      </div>
+      <div id="servoSliders"></div>
+      <div class="btn-row">
+        <button class="primary small" id="btnCenter">center（回原點）</button>
+        <button class="warnbtn small" id="btnRelease">release（全部釋放）</button>
+        <button class="small" id="btnHold">hold（暫停自動釋放）</button>
+        <button class="small" id="btnGuard">guard（重新啟用）</button>
+        <button class="small" id="btnShow">show</button>
+      </div>
+      <div class="status-detail">
+        拖曳滑桿會送出 <code>jog:&lt;軸&gt;:&lt;+/-N&gt;</code>（真實連線）或直接更新模擬位置（模擬模式）。
+        範圍會依韌體目前回報的 <code>servo_positions[].min_us/max_us</code> 自動調整，不是寫死的。
+        「獨立控制頁」不是另開一個檔案/分頁——Web Serial 的序列埠同一時間只能被一個分頁佔用，
+        另開分頁反而會搶連線；這個按鍵是把畫面切成只剩控制面板、放大觸控尺寸，手機瀏覽器打開同一個網址、
+        點這顆按鍵就能用，再點一次「返回儀表板」就回到完整畫面。
+      </div>
+    </section>
+
+    <section class="panel" id="capture-panel">
+      <h2>資料收集（H3：NORMAL_GRIP / OVERLOAD_JAM）</h2>
+      <div class="kin-inputs">
+        <label>類別
+          <select id="captureLabel">
+            <option value="NORMAL_GRIP">NORMAL_GRIP（夾到物體）</option>
+            <option value="OVERLOAD_JAM">OVERLOAD_JAM（卡住/過載）</option>
+            <option value="NO_CONTACT">NO_CONTACT（空夾，無物體）</option>
+          </select>
+        </label>
+        <label>物體描述（自由填寫）<input type="text" id="captureNote" placeholder="例如：木塊、橡皮擦、硬質阻擋物" /></label>
+        <label>步進量 (ticks/次)<input type="number" id="captureStepTicks" value="40" min="1" /></label>
+        <label>步進間隔 (ms)<input type="number" id="captureStepIntervalMs" value="150" min="50" /></label>
+        <label>步數<input type="number" id="captureStepCount" value="14" min="1" /></label>
+      </div>
+      <div class="btn-row">
+        <button class="primary small" id="btnCaptureTrial">執行固定夾持動作＋擷取這筆 trial</button>
+        <button class="small" id="btnDownloadDataset">下載資料集 (JSON)</button>
+      </div>
+      <div class="status-detail" id="captureStatus">尚未開始。動作流程固定：center → 等待你放好物體 →
+        start → 以上面設定的步進/間隔/步數自動關夾爪（不是人手按鍵控制時間）→ stop → release，
+        擷取到的視窗會自動打上你選的類別標籤。</div>
+      <div class="log" id="captureLog" style="max-height:160px;"></div>
+    </section>
+
+    <section class="panel" id="kin-panel">
+      <h2>運動學參數（York Hackspace MeArm FK 模型，可調）</h2>
+      <div class="kin-inputs">
+        <label>L1 肩→肘 (mm)<input type="number" id="kinLink1" value="80" min="1" /></label>
+        <label>L2 肘→腕 (mm)<input type="number" id="kinLink2" value="80" min="1" /></label>
+        <label>L3 前移量合併 (mm)<input type="number" id="kinLink3" value="68" min="0" /></label>
+        <label>每度脈寬 (µs/deg)<input type="number" id="kinUsPerDeg" value="11.11" step="0.01" /></label>
+      </div>
+      <div class="btn-row">
+        <label class="switch-row" style="margin-bottom:0;"><input type="checkbox" id="invSwap" checked />swap 方向反轉</label>
+        <label class="switch-row" style="margin-bottom:0;"><input type="checkbox" id="invStretch" checked />stretch 方向反轉</label>
+        <label class="switch-row" style="margin-bottom:0;"><input type="checkbox" id="invLift" />lift 方向反轉</label>
+      </div>
+      <div class="status-detail">
+        使用者回報 3D 視窗裡 swap/stretch 的動作方向跟實體手臂相反，預設已經勾選反轉這兩軸
+        （角度換算時乘上 -1）；如果之後還是對不上，或哪一軸又反過來了，直接切換上面的勾選框即可，
+        不用改程式碼。
+      </div>
+      <div class="status-detail">
+        公式與預設連桿長度取自 MeArm 官方/社群標準的正向運動學模型（York Hackspace 開源庫：
+        <code>ρ=L3+L1·cos(q1)+L2·cos(q2)</code>、<code>z=L1·sin(q1)+L2·sin(q2)</code>、
+        <code>x=ρ·sin(q0)</code>、<code>y=ρ·cos(q0)</code>，q0/q1/q2 分別是 swap/lift/stretch 換算出的關節角），
+        不是隨便近似——平行四連桿機構對末端位置而言，官方本身也是等效成兩個獨立虛擬轉動關節處理，不需要對整個
+        四連桿做數值求解。真正的誤差來源是 <b>q1/q2 的零點校正</b>：這裡假設校正後的 home 脈寬對應幾何零點，
+        實際上不一定，q1/q2 各差 5° 時末端最壞情況約偏 14mm、各差 10° 約偏 28mm（以 L1=L2=80mm 估算）。
+        量出你手上這支 MeArm 的真實連桿長度後改上面數字即可，3D 視窗會立刻跟著變。
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="panel">
+      <h2>波形視窗 1：三軸加速度（g）</h2>
+      <canvas class="wave" id="chart" width="900" height="220"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--ax)"></i>ax_g</span>
+        <span><i class="swatch" style="background:var(--ay)"></i>ay_g</span>
+        <span><i class="swatch" style="background:var(--az)"></i>az_g</span>
+      </div>
+      <table class="stats">
+        <thead>
+          <tr><th>軸</th><th>RMS</th><th>peak-to-peak</th><th>crest factor</th></tr>
+        </thead>
+        <tbody id="statsBody">
+          <tr><td>ax_g</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>ay_g</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>az_g</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <div class="status-detail" style="margin-top:10px;">
+        RMS / peak-to-peak / crest factor 皆以去除各軸平均值（AC-coupled）後計算，
+        算法與 <code>tools/analyze_baseline.py</code> 的 <code>calculate_time_features</code> 一致。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>波形視窗 2：ACS712 電流 ／ DS18B20 溫度</h2>
+      <canvas class="wave" id="currentChart" width="900" height="220"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--cur)"></i>acs712_adc_raw（每視窗 1024 點）</span>
+      </div>
+      <table class="stats">
+        <thead>
+          <tr><th>訊號</th><th>RMS</th><th>peak-to-peak</th><th>crest factor</th></tr>
+        </thead>
+        <tbody id="currentStatsBody">
+          <tr><td>acs712_adc_raw</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <div class="temp-readout">
+        <span>DS18B20：</span>
+        <span class="big" id="tempBig">—</span>
+        <span class="unit">°C</span>
+        <span class="status-detail" id="tempStatus">未偵測到探頭（選配硬體，見 WARROOM-2.0-PLAN.md）</span>
+      </div>
+      <canvas class="sparkline" id="tempSparkline" width="900" height="60"></canvas>
+      <div class="status-detail" style="margin-top:10px;">
+        ACS712 尚未接分壓實測校正，顯示的是原始 ADC counts，不是安培值——見
+        WARROOM-2.0-PLAN.md「ACS712 訊號線需要分壓」節。DS18B20 每次轉換約 800ms，物理上不可能有 1024 點
+        的高速視窗，這裡改成每次 <code>status</code> 更新時累積一筆到下方的低速趨勢線（最近約 2 分鐘），
+        不是跟電流同一種波形。
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>3D 運動學視窗</h2>
+      <label class="switch-row"><input type="checkbox" id="trajToggle" checked />疊加 IMU 軌跡估計（PoC，見下方說明）</label>
+      <canvas class="kin" id="kinChart" width="900" height="320"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--accent)"></i>連桿</span>
+        <span><i class="swatch" style="background:var(--ok)"></i>末端夾爪位置</span>
+        <span><i class="swatch" style="background:var(--warn)"></i>IMU 軌跡估計</span>
+      </div>
+      <dl class="meta" style="margin-top:10px;">
+        <dt>末端座標 (mm，FK)</dt><dd id="kinEndpoint">—</dd>
+        <dt>IMU 軌跡狀態</dt><dd id="trajStatus">韌體尚未支援（等待 IMU 軌跡 PoC 上線）</dd>
+        <dt>IMU 估計位置 (mm)</dt><dd id="trajPos">—</dd>
+      </dl>
+      <div class="status-detail">
+        橘色軌跡是陀螺儀+加速度計雙重積分的位置估計（PoC，見 WARROOM-2.0-PLAN.md「即時儀表板」節的
+        GY-91 小節）——量化分析顯示理想情況約公分級、實際可能到十幾公分漂移，<b>不是可信的絕對座標</b>，
+        拿來跟藍色的正向運動學（FK，可靠、不漂移）對照，可以直接看出目前這次校正/場景下 IMU 估計偏離
+        FK 多少。`zupt_active` 顯示還沒回過 home 校正過（此時漂移是從開機累積，不具參考價值）。
+      </div>
+      <h2 style="margin-top:18px;">逆向運動學：拖曳滑桿即時控制座標</h2>
+      <div class="servo-row">
+        <label for="ikX">x (mm)</label>
+        <input type="range" id="ikX" min="-230" max="230" value="0" step="1" />
+        <span class="servo-val" id="ikXVal">0</span>
+      </div>
+      <div class="servo-row">
+        <label for="ikY">y (mm)</label>
+        <input type="range" id="ikY" min="-230" max="230" value="228" step="1" />
+        <span class="servo-val" id="ikYVal">228</span>
+      </div>
+      <div class="servo-row">
+        <label for="ikZ">z (mm)</label>
+        <input type="range" id="ikZ" min="-160" max="160" value="0" step="1" />
+        <span class="servo-val" id="ikZVal">0</span>
+      </div>
+      <div class="btn-row">
+        <button class="small" id="btnIkFill">填入目前末端座標</button>
+      </div>
+      <div class="status-detail" id="ikStatus"></div>
+      <div class="status-detail">
+        公式來源與 FK 同一份 York Hackspace <code>ik.cpp</code>（swap/lift/stretch = a0/a1/a2）：
+        a0=atan2(x,y)（注意參數順序，不是常見的 atan2(y,x)）、
+        R=hypot(rho−L3, z)、B=acos((L1²+R²−L2²)/(2L1R))、C=acos((L1²+L2²−R²)/(2L1L2))、
+        a1=φ+B、a2=a1+C−π。只解出原碼選擇的那一支肘部構型，沒有 elbow-up/down 切換；
+        超出臂展（R 不在 |L1−L2| 到 L1+L2 之間）會直接回報無解，不送任何指令。paw 不受這裡控制。
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------------
+  // Constants matching firmware/eep_gripper_h1/eep_gripper_h1.ino. Keep
+  // these in sync if the .ino's SERVO_NAMES / axis order / conversion
+  // math changes -- the dashboard does not read the .ino source, it only
+  // trusts whatever `status` reports at runtime for min/max/home/ticks.
+  // ---------------------------------------------------------------------
+  const AXIS_ORDER = ["swap", "stretch", "lift", "paw"];
+  const ACCEL_LSB_PER_G = 8192.0; // matches tinyml_shadow_h0.ino / eep_gripper_h1.ino comment.
+  const PCA9685_TICKS_PER_PERIOD = 4096;
+  const SERVO_PWM_PERIOD_US = 20000; // 50 Hz, matches eep_gripper_h1.ino SERVO_PWM_FREQUENCY_HZ.
+
+  const els = {
+    unsupported: document.getElementById("unsupported"),
+    statusDot: document.getElementById("statusDot"),
+    statusText: document.getElementById("statusText"),
+    statusDetail: document.getElementById("statusDetail"),
+    mockToggle: document.getElementById("mockToggle"),
+    btnConnect: document.getElementById("btnConnect"),
+    btnStart: document.getElementById("btnStart"),
+    btnStop: document.getElementById("btnStop"),
+    btnQuery: document.getElementById("btnQuery"),
+    btnDisconnect: document.getElementById("btnDisconnect"),
+    staleBanner: document.getElementById("staleBanner"),
+    fwState: document.getElementById("fwState"),
+    fwGy91Ready: document.getElementById("fwGy91Ready"),
+    fwPcaReady: document.getElementById("fwPcaReady"),
+    fwTimeoutGuard: document.getElementById("fwTimeoutGuard"),
+    fwStreaming: document.getElementById("fwStreaming"),
+    pageWindowsReceived: document.getElementById("pageWindowsReceived"),
+    fwSampleRate: document.getElementById("fwSampleRate"),
+    lastUpdate: document.getElementById("lastUpdate"),
+    malformedCount: document.getElementById("malformedCount"),
+    log: document.getElementById("log"),
+    chart: document.getElementById("chart"),
+    statsBody: document.getElementById("statsBody"),
+    currentChart: document.getElementById("currentChart"),
+    currentStatsBody: document.getElementById("currentStatsBody"),
+    tempBig: document.getElementById("tempBig"),
+    tempStatus: document.getElementById("tempStatus"),
+    tempSparkline: document.getElementById("tempSparkline"),
+    servoSliders: document.getElementById("servoSliders"),
+    servoTimeoutHint: document.getElementById("servoTimeoutHint"),
+    btnControlView: document.getElementById("btnControlView"),
+    btnCenter: document.getElementById("btnCenter"),
+    btnRelease: document.getElementById("btnRelease"),
+    btnHold: document.getElementById("btnHold"),
+    btnGuard: document.getElementById("btnGuard"),
+    btnShow: document.getElementById("btnShow"),
+    kinLink1: document.getElementById("kinLink1"),
+    kinLink2: document.getElementById("kinLink2"),
+    kinLink3: document.getElementById("kinLink3"),
+    kinUsPerDeg: document.getElementById("kinUsPerDeg"),
+    invSwap: document.getElementById("invSwap"),
+    invStretch: document.getElementById("invStretch"),
+    invLift: document.getElementById("invLift"),
+    kinChart: document.getElementById("kinChart"),
+    kinEndpoint: document.getElementById("kinEndpoint"),
+    trajToggle: document.getElementById("trajToggle"),
+    trajStatus: document.getElementById("trajStatus"),
+    trajPos: document.getElementById("trajPos"),
+    captureLabel: document.getElementById("captureLabel"),
+    captureNote: document.getElementById("captureNote"),
+    captureStepTicks: document.getElementById("captureStepTicks"),
+    captureStepIntervalMs: document.getElementById("captureStepIntervalMs"),
+    captureStepCount: document.getElementById("captureStepCount"),
+    btnCaptureTrial: document.getElementById("btnCaptureTrial"),
+    btnDownloadDataset: document.getElementById("btnDownloadDataset"),
+    captureStatus: document.getElementById("captureStatus"),
+    captureLog: document.getElementById("captureLog"),
+    ikX: document.getElementById("ikX"),
+    ikY: document.getElementById("ikY"),
+    ikZ: document.getElementById("ikZ"),
+    ikXVal: document.getElementById("ikXVal"),
+    ikYVal: document.getElementById("ikYVal"),
+    ikZVal: document.getElementById("ikZVal"),
+    btnIkFill: document.getElementById("btnIkFill"),
+    ikStatus: document.getElementById("ikStatus"),
+  };
+
+  const STALE_TIMEOUT_MS = 6000; // generous vs. the ~1.7-2.6s per-window transmission time at 115200 baud
+  const AXIS_COLORS = { ax_g: "#e0574f", ay_g: "#22b8a6", az_g: "#4f8ef7", current: "#c37bf0" };
+  const ACCEL_AXES = ["ax_g", "ay_g", "az_g"];
+  const TEMP_HISTORY_MAX = 120; // ~2 min at the ~1 reading/s DS18B20 cadence.
+  const tempHistory = [];
+  const TRAJ_HISTORY_MAX = 300; // rolling trail length, not a duration -- windows arrive roughly 1/s.
+  const trajectoryHistory = []; // {x,y,z} mm, IMU PoC estimate, independent of FK.
+
+  // H3 data-collection state. activeTrialBuffer is non-null only while a
+  // trial's `start`..`stop` window is in progress; handleWindow() pushes into
+  // it above. collectedTrials accumulates finished trials for download.
+  let activeTrialBuffer = null;
+  let capturePhase = "idle"; // idle -> armed (centered, waiting on the operator) -> running -> idle
+  const collectedTrials = [];
+
+  let port = null;
+  let reader = null;
+  let writer = null;
+  let readableClosed = null;
+  let lineBuffer = "";
+  let windowsReceived = 0;
+  let malformed = 0;
+  let staleTimer = null;
+  let mockTimer = null;
+  // Real firmware only emits `status` (which carries temp_c/ds18b20_ready)
+  // on boot, on an explicit `status` query, or after start/stop/timeout --
+  // there is no periodic broadcast. Without polling, DS18B20's trend line
+  // (and mock mode's, which mirrors the same handleStatus() path) would get
+  // at most one point and never draw. This timer keeps it -- and every other
+  // status field -- fresh in both real and mock mode.
+  const STATUS_POLL_MS = 1500;
+  let statusPollTimer = null;
+
+  function startStatusPolling() {
+    stopStatusPolling();
+    statusPollTimer = setInterval(() => {
+      if (els.mockToggle.checked) handleStatus(mockStatusPayload("ready"));
+      else sendCommand("status");
+    }, STATUS_POLL_MS);
+  }
+
+  function stopStatusPolling() {
+    if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
+  }
+  let commandTimeoutEnabled = true;
+  let lastWindowMsg = null;
+
+  // Per-axis live state, updated from `status` JSON, `show` table lines, and
+  // single-axis `OK <axis>: N ticks (Mus) [on/off]` confirmation lines alike
+  // -- all three carry the same information, just in different formats.
+  const servoState = {};
+  AXIS_ORDER.forEach((name) => {
+    servoState[name] = { ticks: 0, us: 1500, enabled: false, minUs: 500, maxUs: 2500, homeUs: 1500 };
+  });
+
+  function logLine(text) {
+    const time = new Date().toLocaleTimeString("zh-TW", { hour12: false });
+    els.log.textContent = `[${time}] ${text}\n` + els.log.textContent;
+  }
+
+  function setStatus(kind, text, detail) {
+    els.statusDot.className = "status-dot " + kind;
+    els.statusText.textContent = text;
+    els.statusDetail.textContent = detail || "";
+  }
+
+  function setControlsConnected(connected) {
+    const mocking = els.mockToggle.checked;
+    els.btnConnect.disabled = connected || mocking;
+    els.btnStart.disabled = !(connected || mocking);
+    els.btnStop.disabled = !(connected || mocking);
+    els.btnQuery.disabled = !(connected || mocking);
+    els.btnDisconnect.disabled = !connected;
+  }
+
+  function resetStaleTimer() {
+    if (staleTimer) clearTimeout(staleTimer);
+    els.staleBanner.classList.remove("stale");
+    if (els.mockToggle.checked) return; // mock mode is never "stale" by design
+    staleTimer = setTimeout(() => {
+      els.staleBanner.classList.add("stale");
+    }, STALE_TIMEOUT_MS);
+  }
+
+  // -----------------------------------------------------------------------
+  // Servo slider panel
+  // -----------------------------------------------------------------------
+
+  function buildServoSliders() {
+    els.servoSliders.innerHTML = "";
+    AXIS_ORDER.forEach((name) => {
+      const row = document.createElement("div");
+      row.className = "servo-row";
+      row.innerHTML = `
+        <label for="slider-${name}">${name}</label>
+        <input type="range" id="slider-${name}" min="${servoState[name].minUs}" max="${servoState[name].maxUs}" value="${servoState[name].us}" step="1" />
+        <span class="servo-val" id="val-${name}">—</span>
+      `;
+      els.servoSliders.appendChild(row);
+      const slider = row.querySelector("input");
+      slider.addEventListener("input", () => onSliderInput(name, Number(slider.value)));
+    });
+    AXIS_ORDER.forEach(updateServoRowDisplay);
+  }
+
+  function updateServoRowDisplay(name) {
+    const slider = document.getElementById(`slider-${name}`);
+    const val = document.getElementById(`val-${name}`);
+    if (!slider || !val) return;
+    const s = servoState[name];
+    slider.min = String(s.minUs);
+    slider.max = String(s.maxUs);
+    if (document.activeElement !== slider) slider.value = String(s.us);
+    val.innerHTML = `${s.ticks}t ${s.us}us <span class="${s.enabled ? "on" : "off"}">[${s.enabled ? "on" : "off"}]</span>`;
+  }
+
+  function usToTickDelta(fromUs, toUs) {
+    const fromTicks = Math.round((fromUs * PCA9685_TICKS_PER_PERIOD) / SERVO_PWM_PERIOD_US);
+    const toTicks = Math.round((toUs * PCA9685_TICKS_PER_PERIOD) / SERVO_PWM_PERIOD_US);
+    return toTicks - fromTicks;
+  }
+
+  function onSliderInput(name, targetUs) {
+    if (els.mockToggle.checked) {
+      servoState[name].us = targetUs;
+      servoState[name].ticks = Math.round((targetUs * PCA9685_TICKS_PER_PERIOD) / SERVO_PWM_PERIOD_US);
+      servoState[name].enabled = true;
+      updateServoRowDisplay(name);
+      drawKinematics();
+      return;
+    }
+    const delta = usToTickDelta(servoState[name].us, targetUs);
+    if (delta === 0) return;
+    const code = { swap: "s", stretch: "t", lift: "l", paw: "p" }[name];
+    sendCommand(`${code}${delta > 0 ? "+" : ""}${delta}`);
+  }
+
+  // -----------------------------------------------------------------------
+  // Protocol parsing: H1 emits JSON for status/error/window, and plain
+  // human-readable text for jog/center/release/hold/guard/show (see the
+  // .ino's "Design notes" header comment). Both must update servoState.
+  // -----------------------------------------------------------------------
+
+  const OK_LINE_RE = /^OK\s+(\w+):\s+(-?\d+)\s+ticks\s+\((\d+)us\)\s+\[(on|off)\]/;
+  const SHOW_ROW_RE = /^(\w+):\s+(-?\d+)\s+ticks\s+\((\d+)us\)\s+\[(on|off)\]\s+range\s+(\d+)-(\d+)us/;
+  const SHOW_HEADER_RE = /^---- servo positions \(timeout (armed|HELD[^)]*)\) ----/;
+  const HOLD_RE = /^OK auto-release timeout DISABLED/;
+  const GUARD_RE = /^OK auto-release timeout ARMED/;
+
+  function applyAxisUpdate(name, ticks, us, enabled, minUs, maxUs) {
+    if (!servoState[name]) return;
+    const s = servoState[name];
+    s.ticks = ticks;
+    s.us = us;
+    s.enabled = enabled === "on";
+    if (minUs !== undefined) s.minUs = minUs;
+    if (maxUs !== undefined) s.maxUs = maxUs;
+    updateServoRowDisplay(name);
+  }
+
+  function updateTimeoutHint() {
+    els.servoTimeoutHint.textContent = commandTimeoutEnabled
+      ? "逾時保護：armed（3 秒沒指令會自動 release）"
+      : "逾時保護：HELD（已停用，記得校正完打 guard）";
+    els.fwTimeoutGuard.textContent = commandTimeoutEnabled ? "armed" : "HELD";
+  }
+
+  function handlePlainTextLine(line) {
+    const okMatch = line.match(OK_LINE_RE);
+    if (okMatch) {
+      applyAxisUpdate(okMatch[1], Number(okMatch[2]), Number(okMatch[3]), okMatch[4]);
+      drawKinematics();
+      logLine(line);
+      return true;
+    }
+    const showRow = line.match(SHOW_ROW_RE);
+    if (showRow) {
+      applyAxisUpdate(showRow[1], Number(showRow[2]), Number(showRow[3]), showRow[4], Number(showRow[5]), Number(showRow[6]));
+      AXIS_ORDER.forEach((n) => document.getElementById(`slider-${n}`) && updateServoRowDisplay(n));
+      drawKinematics();
+      return true;
+    }
+    if (SHOW_HEADER_RE.test(line) || line.startsWith("--------------------------")) {
+      logLine(line);
+      return true;
+    }
+    if (HOLD_RE.test(line)) {
+      commandTimeoutEnabled = false;
+      updateTimeoutHint();
+      logLine(line);
+      return true;
+    }
+    if (GUARD_RE.test(line)) {
+      commandTimeoutEnabled = true;
+      updateTimeoutHint();
+      logLine(line);
+      return true;
+    }
+    // The firmware's `hold` response is two Serial.println() calls, so its
+    // second line ("   'guard', 'release', or power is cut...") arrives as
+    // a separate line here and would otherwise fall through to "malformed"
+    // even though it is a normal, expected part of the protocol.
+    if (line.startsWith("   '")) {
+      logLine(line);
+      return true;
+    }
+    return false;
+  }
+
+  // -----------------------------------------------------------------------
+  // Waveform + stats (time domain)
+  // -----------------------------------------------------------------------
+
+  function computeAxisStats(values) {
+    const n = values.length;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += values[i];
+    const mean = sum / n;
+    let sumSq = 0, min = Infinity, max = -Infinity, maxAbs = 0;
+    for (let i = 0; i < n; i++) {
+      const ac = values[i] - mean;
+      sumSq += ac * ac;
+      if (values[i] < min) min = values[i];
+      if (values[i] > max) max = values[i];
+      if (Math.abs(ac) > maxAbs) maxAbs = Math.abs(ac);
+    }
+    const rms = Math.sqrt(sumSq / n);
+    const peakToPeak = max - min;
+    const crestFactor = rms > 0 ? maxAbs / rms : NaN;
+    return { rms, peakToPeak, crestFactor, min, max };
+  }
+
+  function windowSeries(msg, axis) {
+    if (axis === "current") return msg.acs712_adc_raw;
+    const rawKey = { ax_g: "ax_raw", ay_g: "ay_raw", az_g: "az_raw" }[axis];
+    return msg[rawKey].map((v) => v / ACCEL_LSB_PER_G);
+  }
+
+  function drawLineChart(canvas, series, color, unitLabel) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    let min = Infinity, max = -Infinity;
+    for (const v of series) { if (v < min) min = v; if (v > max) max = v; }
+    if (!isFinite(min) || !isFinite(max) || min === max) { min -= 1; max += 1; }
+    const pad = (max - min) * 0.1 || 0.1;
+    min -= pad; max += pad;
+
+    ctx.strokeStyle = "#1e2b45";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = (h / 4) * i;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    const n = series.length;
+    const xStep = w / (n - 1);
+    const yFor = (v) => h - ((v - min) / (max - min)) * h;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = i * xStep, y = yFor(series[i]);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "#8fa0bd";
+    ctx.font = "11px monospace";
+    ctx.fillText(`${max.toFixed(2)} ${unitLabel}`, 4, 12);
+    ctx.fillText(`${min.toFixed(2)} ${unitLabel}`, 4, h - 4);
+  }
+
+  function drawAccelChart(windowMsg) {
+    const ctx = els.chart.getContext("2d");
+    const w = els.chart.width, h = els.chart.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const accelSeries = ACCEL_AXES.map((a) => windowSeries(windowMsg, a));
+    let globalMin = Infinity, globalMax = -Infinity;
+    for (const series of accelSeries) {
+      for (const v of series) {
+        if (v < globalMin) globalMin = v;
+        if (v > globalMax) globalMax = v;
+      }
+    }
+    if (!isFinite(globalMin) || !isFinite(globalMax) || globalMin === globalMax) {
+      globalMin -= 1; globalMax += 1;
+    }
+    const pad = (globalMax - globalMin) * 0.1 || 0.1;
+    globalMin -= pad; globalMax += pad;
+
+    ctx.strokeStyle = "#1e2b45";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = (h / 4) * i;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    const n = accelSeries[0].length;
+    const xStep = w / (n - 1);
+    const yFor = (v) => h - ((v - globalMin) / (globalMax - globalMin)) * h;
+
+    ACCEL_AXES.forEach((axis, idx) => {
+      const values = accelSeries[idx];
+      ctx.strokeStyle = AXIS_COLORS[axis];
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const x = i * xStep;
+        const y = yFor(values[i]);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = "#8fa0bd";
+    ctx.font = "11px monospace";
+    ctx.fillText(`${globalMax.toFixed(2)} g`, 4, 12);
+    ctx.fillText(`${globalMin.toFixed(2)} g`, 4, h - 4);
+  }
+
+  function drawCurrentChart(windowMsg) {
+    drawLineChart(els.currentChart, windowMsg.acs712_adc_raw, AXIS_COLORS.current, "adc");
+  }
+
+  function updateStatsTable(windowMsg) {
+    const rows = els.statsBody.querySelectorAll("tr");
+    ACCEL_AXES.forEach((axis, idx) => {
+      const stats = computeAxisStats(windowSeries(windowMsg, axis));
+      const cells = rows[idx].querySelectorAll("td");
+      cells[1].textContent = stats.rms.toFixed(4);
+      cells[2].textContent = stats.peakToPeak.toFixed(4);
+      cells[3].textContent = isNaN(stats.crestFactor) ? "—" : stats.crestFactor.toFixed(2);
+    });
+
+    const curStats = computeAxisStats(windowMsg.acs712_adc_raw);
+    const curCells = els.currentStatsBody.querySelector("tr").querySelectorAll("td");
+    curCells[1].textContent = curStats.rms.toFixed(1);
+    curCells[2].textContent = curStats.peakToPeak.toFixed(1);
+    curCells[3].textContent = isNaN(curStats.crestFactor) ? "—" : curStats.crestFactor.toFixed(2);
+  }
+
+  // -----------------------------------------------------------------------
+  // DS18B20: slow (~1 reading/s) scalar from `status`, not a per-window
+  // waveform -- physically cannot be one, a 12-bit conversion takes ~750ms.
+  // Kept as a rolling trend line, separate in kind from the ACS712 waveform
+  // even though they share a panel.
+  // -----------------------------------------------------------------------
+
+  function updateTemperature(ready, tempC) {
+    if (!ready) {
+      els.tempBig.textContent = "—";
+      els.tempStatus.textContent = "未偵測到探頭（選配硬體，見 WARROOM-2.0-PLAN.md）";
+      return;
+    }
+    els.tempStatus.textContent = "";
+    if (typeof tempC !== "number" || Number.isNaN(tempC)) return;
+    els.tempBig.textContent = tempC.toFixed(2);
+    tempHistory.push(tempC);
+    if (tempHistory.length > TEMP_HISTORY_MAX) tempHistory.shift();
+    if (tempHistory.length >= 2) drawLineChart(els.tempSparkline, tempHistory, "#e0a730", "°C");
+  }
+
+  // -----------------------------------------------------------------------
+  // 3D kinematics: MeArm's documented forward-kinematics model (York
+  // Hackspace open-source library -- config.h / Geometry.md / ik.cpp,
+  // https://github.com/yorkhackspace/meArm), not an ad-hoc approximation.
+  // The parallelogram linkage is, by the official design itself, equivalent
+  // to two independent joint angles for end-position purposes:
+  //   rho = L3 + L1*cos(q1) + L2*cos(q2)
+  //   z   =      L1*sin(q1) + L2*sin(q2)
+  //   x = rho*sin(q0), y = rho*cos(q0)
+  // q0=swap (yaw), q1=lift (shoulder), q2=stretch (elbow), each measured as
+  // an absolute angle from the mechanism's horizontal-reach pose -- NOT
+  // relative to the previous link. The one approximation this page still
+  // makes is treating each axis's calibrated SERVO_HOME_US as that
+  // horizontal-pose zero angle, which is convenient but unverified; real
+  // zero-angle calibration would need the physical geometry, not just the
+  // pulse-width home value. See the on-page hint for the resulting position
+  // error per degree of miscalibration.
+  // -----------------------------------------------------------------------
+
+  function degFromUs(axisName, us) {
+    const usPerDeg = Number(els.kinUsPerDeg.value) || 11.11;
+    const home = servoState[axisName].homeUs || 1500;
+    const invEl = { swap: els.invSwap, stretch: els.invStretch, lift: els.invLift }[axisName];
+    const sign = invEl && invEl.checked ? -1 : 1;
+    return (sign * (us - home)) / usPerDeg;
+  }
+
+  function project(x, y, z, w, h) {
+    // Simple isometric-style projection; no 3D library, matches the rest of
+    // this file's zero-dependency, offline-friendly convention.
+    const scale = 1.6;
+    const cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
+    const sx = w / 2 + (x - y) * cos30 * scale;
+    const sy = h - 40 - z * scale - (x + y) * sin30 * scale;
+    return [sx, sy];
+  }
+
+  function forwardKinematics() {
+    const L1 = Number(els.kinLink1.value) || 80;
+    const L2 = Number(els.kinLink2.value) || 80;
+    const L3 = Number(els.kinLink3.value) || 68;
+
+    const q0 = (degFromUs("swap", servoState.swap.us) * Math.PI) / 180;
+    const q1 = (degFromUs("lift", servoState.lift.us) * Math.PI) / 180;
+    const q2 = (degFromUs("stretch", servoState.stretch.us) * Math.PI) / 180;
+
+    // Intermediate point after only the L1 (shoulder) vector, for drawing
+    // the two links separately -- L3 is a fixed radial offset shared by
+    // both segments (it is the combined base->shoulder / wrist->tip
+    // standoff, not a third moving link), see the panel's help text.
+    const rhoJoint1 = L3 + L1 * Math.cos(q1);
+    const zJoint1 = L1 * Math.sin(q1);
+    const rhoEnd = L3 + L1 * Math.cos(q1) + L2 * Math.cos(q2);
+    const zEnd = L1 * Math.sin(q1) + L2 * Math.sin(q2);
+
+    const joint1 = { x: rhoJoint1 * Math.sin(q0), y: rhoJoint1 * Math.cos(q0), z: zJoint1 };
+    const endpoint = { x: rhoEnd * Math.sin(q0), y: rhoEnd * Math.cos(q0), z: zEnd };
+    return { joint1, endpoint };
+  }
+
+  // Firmware's est_x/y/z_mm are relative to wherever the last ZUPT reset fired
+  // (reset to 0,0,0 there -- see armZuptHomeReset()/updateZupt() in the .ino),
+  // NOT absolute from the shoulder pivot like FK's origin. ZUPT only ever
+  // fires right after `center`/`home` settles, so "last reset point" is
+  // always the FK home pose (q0=q1=q2=0) -- offsetting by that pose's FK
+  // endpoint re-anchors the IMU estimate into the same frame FK draws in.
+  // Without this, the trail would appear to start at the shoulder pivot
+  // instead of at the arm's actual home position.
+  function homeEndpointOffset() {
+    const L1 = Number(els.kinLink1.value) || 80;
+    const L2 = Number(els.kinLink2.value) || 80;
+    const L3 = Number(els.kinLink3.value) || 68;
+    return { x: 0, y: L3 + L1 + L2, z: 0 }; // FK at q0=q1=q2=0
+  }
+
+  function drawKinematics() {
+    const { joint1, endpoint } = forwardKinematics();
+    const ctx = els.kinChart.getContext("2d");
+    const w = els.kinChart.width, h = els.kinChart.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // ground grid for spatial reference
+    ctx.strokeStyle = "#1e2b45";
+    ctx.lineWidth = 1;
+    const gridSpan = Math.max(120, Number(els.kinLink1.value) + Number(els.kinLink2.value));
+    for (let i = -2; i <= 2; i++) {
+      const [x1, y1] = project((i * gridSpan) / 2, -gridSpan, 0, w, h);
+      const [x2, y2] = project((i * gridSpan) / 2, gridSpan, 0, w, h);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      const [x3, y3] = project(-gridSpan, (i * gridSpan) / 2, 0, w, h);
+      const [x4, y4] = project(gridSpan, (i * gridSpan) / 2, 0, w, h);
+      ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
+    }
+
+    const p0 = project(0, 0, 0, w, h);
+    const p1 = project(joint1.x, joint1.y, joint1.z, w, h);
+    const p2 = project(endpoint.x, endpoint.y, endpoint.z, w, h);
+
+    ctx.strokeStyle = "#4f8ef7";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
+
+    ctx.fillStyle = "#22b8a6";
+    ctx.beginPath(); ctx.arc(p2[0], p2[1], 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#8fa0bd";
+    ctx.beginPath(); ctx.arc(p0[0], p0[1], 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p1[0], p1[1], 3, 0, Math.PI * 2); ctx.fill();
+
+    // IMU trajectory PoC overlay: independent estimate, drawn as a fading
+    // trail so recent points stand out from older (more-drifted) ones.
+    if (els.trajToggle.checked && trajectoryHistory.length >= 2) {
+      const n = trajectoryHistory.length;
+      for (let i = 1; i < n; i++) {
+        const a = project(trajectoryHistory[i - 1].x, trajectoryHistory[i - 1].y, trajectoryHistory[i - 1].z, w, h);
+        const b = project(trajectoryHistory[i].x, trajectoryHistory[i].y, trajectoryHistory[i].z, w, h);
+        ctx.strokeStyle = `rgba(224, 167, 48, ${0.15 + 0.65 * (i / n)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      }
+      const last = trajectoryHistory[n - 1];
+      const plast = project(last.x, last.y, last.z, w, h);
+      ctx.fillStyle = "#e0a730";
+      ctx.beginPath(); ctx.arc(plast[0], plast[1], 5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    els.kinEndpoint.textContent = `x=${endpoint.x.toFixed(1)} y=${endpoint.y.toFixed(1)} z=${endpoint.z.toFixed(1)}`;
+  }
+
+  // -----------------------------------------------------------------------
+  // Inverse kinematics: verified line-by-line against York Hackspace's
+  // ik.cpp (https://raw.githubusercontent.com/yorkhackspace/meArm/master/ik.cpp),
+  // same convention as forwardKinematics() above (a0=atan2(x,y), NOT the more
+  // common atan2(y,x) -- this matches x=rho*sin(a0), y=rho*cos(a0)). Only
+  // solves the single elbow configuration ik.cpp itself picks; there is no
+  // elbow-up/elbow-down switch, by the source's own design.
+  // -----------------------------------------------------------------------
+
+  function inverseKinematics(x, y, z) {
+    const L1 = Number(els.kinLink1.value) || 80;
+    const L2 = Number(els.kinLink2.value) || 80;
+    const L3 = Number(els.kinLink3.value) || 68;
+
+    const rho = Math.hypot(x, y);
+    if (rho < 1e-6) return null;
+    const a0 = Math.atan2(x, y);
+    const u = rho - L3;
+    const R = Math.hypot(u, z);
+    if (R < 1e-6) return null;
+    if (R < Math.abs(L1 - L2) || R > L1 + L2) return null;
+
+    const phi = Math.atan2(z, u);
+    const B = Math.acos((L1 * L1 + R * R - L2 * L2) / (2 * L1 * R));
+    const C = Math.acos((L1 * L1 + L2 * L2 - R * R) / (2 * L1 * L2));
+    const a1 = phi + B;
+    const a2 = a1 + C - Math.PI;
+    return { q0: a0, q1: a1, q2: a2 };
+  }
+
+  // Inverse of degFromUs(): degrees -> pulse width, honoring the same home
+  // offset / sign-inversion checkboxes so IK output lands where the FK view
+  // (with the same settings) would draw it.
+  function usFromDeg(axisName, deg) {
+    const usPerDeg = Number(els.kinUsPerDeg.value) || 11.11;
+    const home = servoState[axisName].homeUs || 1500;
+    const invEl = { swap: els.invSwap, stretch: els.invStretch, lift: els.invLift }[axisName];
+    const sign = invEl && invEl.checked ? -1 : 1;
+    return home + sign * deg * usPerDeg;
+  }
+
+  function moveToTarget() {
+    const x = Number(els.ikX.value), y = Number(els.ikY.value), z = Number(els.ikZ.value);
+    els.ikXVal.textContent = String(x);
+    els.ikYVal.textContent = String(y);
+    els.ikZVal.textContent = String(z);
+    const sol = inverseKinematics(x, y, z);
+    if (!sol) {
+      els.ikStatus.textContent = "⚠ 目標超出可達範圍（超出臂展或太靠近底座），沒有送出任何指令";
+      return;
+    }
+
+    const rad2deg = 180 / Math.PI;
+    const targetUs = {
+      swap: usFromDeg("swap", sol.q0 * rad2deg),
+      lift: usFromDeg("lift", sol.q1 * rad2deg),
+      stretch: usFromDeg("stretch", sol.q2 * rad2deg),
+    };
+
+    let clamped = false;
+    for (const name of ["swap", "lift", "stretch"]) {
+      const s = servoState[name];
+      const raw = targetUs[name];
+      const bounded = Math.min(Math.max(raw, s.minUs), s.maxUs);
+      if (bounded !== raw) clamped = true;
+      targetUs[name] = bounded;
+    }
+
+    ["swap", "lift", "stretch"].forEach((name) => onSliderInput(name, Math.round(targetUs[name])));
+    els.ikStatus.textContent = clamped
+      ? "⚠ 已送出，但至少一軸的解算角度超出目前的安全範圍，被夾在邊界——實際位置不會剛好等於輸入座標"
+      : "✓ 已送出（真實連線）或已更新模擬位置";
+  }
+
+  // -----------------------------------------------------------------------
+  // Message handling shared by real serial input and mock mode -- mock data
+  // is fed through the exact same handleStatus/handleWindow path so every
+  // panel (sliders, waveforms, temperature, 3D view) is exercised identically
+  // whether or not real hardware is attached.
+  // -----------------------------------------------------------------------
+
+  function handleStatus(msg) {
+    els.fwState.textContent = msg.state ?? "—";
+    if (typeof msg.gy91_ready === "boolean") els.fwGy91Ready.textContent = String(msg.gy91_ready);
+    if (typeof msg.pca9685_ready === "boolean") els.fwPcaReady.textContent = String(msg.pca9685_ready);
+    if (typeof msg.command_timeout_enabled === "boolean") {
+      commandTimeoutEnabled = msg.command_timeout_enabled;
+      updateTimeoutHint();
+    }
+    els.fwStreaming.textContent = String(msg.streaming ?? "—");
+    els.fwSampleRate.textContent = msg.sample_rate_hz ?? "—";
+    if (typeof msg.ds18b20_ready === "boolean") {
+      updateTemperature(msg.ds18b20_ready, typeof msg.temp_c === "number" ? msg.temp_c : NaN);
+    }
+    if (typeof msg.imu_trajectory_ready === "boolean") {
+      els.trajStatus.textContent = !msg.imu_trajectory_ready
+        ? "韌體尚未支援（等待 IMU 軌跡 PoC 上線）"
+        : msg.zupt_active
+          ? "已完成至少一次 ZUPT 校正（估計值較可信，仍是 PoC）"
+          : "尚未回過 home 校正（目前漂移是開機累積，不具參考價值）";
+    }
+    if (msg.servo_positions) {
+      AXIS_ORDER.forEach((name) => {
+        const p = msg.servo_positions[name];
+        if (!p) return;
+        applyAxisUpdate(name, p.ticks, p.pulse_us, p.enabled ? "on" : "off", p.min_us, p.max_us);
+        if (typeof p.home_us === "number") servoState[name].homeUs = p.home_us;
+      });
+      drawKinematics();
+    }
+    if (msg.state === "streaming") setStatus("streaming", "串流中", "正在接收感測視窗");
+    else if (msg.state && msg.state.startsWith("stopped")) setStatus("stopped", "已停止", msg.state);
+    else if (msg.state === "servo_timeout_released") setStatus("stopped", "逾時自動釋放", "3 秒沒收到新指令，已自動 release");
+    else if (msg.state === "ready") setStatus("stopped", "已就緒", "感測器初始化成功，尚未開始串流");
+    else if (msg.state === "hardware_init_degraded") setStatus("error", "部分子系統未就緒", "看上面 gy91_ready/pca9685_ready 哪個是 false");
+    logLine(`status: ${msg.state}`);
+  }
+
+  function handleError(msg) {
+    logLine(`⚠ error: ${msg.message}`);
+  }
+
+  function handleWindow(msg) {
+    windowsReceived += 1;
+    els.pageWindowsReceived.textContent = String(windowsReceived);
+    els.lastUpdate.textContent = new Date().toLocaleTimeString("zh-TW", { hour12: false });
+    resetStaleTimer();
+    lastWindowMsg = msg;
+    drawAccelChart(msg);
+    drawCurrentChart(msg);
+    updateStatsTable(msg);
+    if (typeof msg.est_x_mm === "number") {
+      const home = homeEndpointOffset();
+      const abs = { x: msg.est_x_mm + home.x, y: msg.est_y_mm + home.y, z: msg.est_z_mm + home.z };
+      trajectoryHistory.push(abs);
+      if (trajectoryHistory.length > TRAJ_HISTORY_MAX) trajectoryHistory.shift();
+      els.trajPos.textContent = `x=${abs.x.toFixed(1)} y=${abs.y.toFixed(1)} z=${abs.z.toFixed(1)}`;
+      drawKinematics();
+    }
+    if (activeTrialBuffer) {
+      activeTrialBuffer.windows.push(msg);
+    }
+  }
+
+  function handleLine(line) {
+    let msg;
+    try {
+      msg = JSON.parse(line);
+    } catch (e) {
+      if (handlePlainTextLine(line)) return;
+      malformed += 1;
+      els.malformedCount.textContent = String(malformed);
+      logLine(`⚠ 無法解析的行（已略過）: ${line.slice(0, 80)}`);
+      return;
+    }
+    if (msg.type === "status") handleStatus(msg);
+    else if (msg.type === "error") handleError(msg);
+    else if (msg.type === "window") handleWindow(msg);
+  }
+
+  // -----------------------------------------------------------------------
+  // Real serial connection (Web Serial API)
+  // -----------------------------------------------------------------------
+
+  async function readLoop() {
+    const textDecoder = new TextDecoderStream();
+    readableClosed = port.readable.pipeTo(textDecoder.writable);
+    reader = textDecoder.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        lineBuffer += value;
+        let idx;
+        while ((idx = lineBuffer.indexOf("\n")) >= 0) {
+          const line = lineBuffer.slice(0, idx).replace(/\r$/, "");
+          lineBuffer = lineBuffer.slice(idx + 1);
+          if (line.trim()) handleLine(line);
+        }
+      }
+    } catch (e) {
+      logLine(`⚠ 讀取中斷: ${e.message}`);
+      setStatus("disconnected", "已中斷", e.message);
+    } finally {
+      try { reader.releaseLock(); } catch (_) {}
+    }
+  }
+
+  async function sendCommand(cmd) {
+    if (els.mockToggle.checked) {
+      logLine(`(模擬) → ${cmd}`);
+      return;
+    }
+    if (!port || !port.writable) return;
+    const encoder = new TextEncoderStream();
+    const writableClosed = encoder.readable.pipeTo(port.writable);
+    writer = encoder.writable.getWriter();
+    try {
+      await writer.write(cmd + "\n");
+      logLine(`→ 送出指令: ${cmd}`);
+    } finally {
+      await writer.close();
+      await writableClosed.catch(() => {});
+    }
+  }
+
+  async function connect() {
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+      setControlsConnected(true);
+      setStatus("connecting", "已連接，等待第一筆 status", "序列埠已開啟");
+      logLine("序列埠已開啟 (115200 baud)");
+      resetStaleTimer();
+      startStatusPolling();
+      readLoop();
+    } catch (e) {
+      logLine(`⚠ 連接失敗: ${e.message}`);
+      setStatus("error", "連接失敗", e.message);
+    }
+  }
+
+  async function disconnect() {
+    try {
+      if (reader) { await reader.cancel().catch(() => {}); }
+      if (readableClosed) { await readableClosed.catch(() => {}); }
+      if (port) { await port.close().catch(() => {}); }
+    } finally {
+      port = null;
+      setControlsConnected(false);
+      setStatus("disconnected", "已中斷連線", "可重新點「連接裝置」");
+      if (staleTimer) clearTimeout(staleTimer);
+      stopStatusPolling();
+      els.staleBanner.classList.remove("stale");
+      logLine("已手動中斷連線");
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Mock mode: synthetic status/window messages on a timer, fed through the
+  // exact same handlers real serial data uses. Lets every panel be built,
+  // demoed, and tested without any hardware attached -- and independently,
+  // lets you keep using the page for whichever sensors ARE attached even if
+  // others (e.g. ACS712 before the divider is wired) are not.
+  // -----------------------------------------------------------------------
+
+  let mockPhase = 0;
+  // Mock-only stand-in for what the real ZUPT PoC would do: a random walk
+  // around the current FK endpoint that grows over time and snaps back to 0
+  // on `center`/`home` (approximating a ZUPT reset). This is purely for
+  // exercising the trail-drawing code path -- it is NOT a simulation of real
+  // IMU drift statistics, see the GY-91 section in WARROOM-2.0-PLAN.md for
+  // the actual quantitative estimate.
+  let mockTrajDrift = { x: 0, y: 0, z: 0 };
+  let mockZuptActive = false;
+
+  function mockWindow() {
+    const n = 1024;
+    const ax = new Array(n), ay = new Array(n), az = new Array(n), cur = new Array(n);
+    mockPhase += 1;
+    const jitter = servoState.paw.enabled ? 1.0 : 0.15; // pretend contact jitters more
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      ax[i] = Math.round((Math.sin(t * 40 + mockPhase) * 0.3 * jitter + (Math.random() - 0.5) * 0.05) * ACCEL_LSB_PER_G);
+      ay[i] = Math.round((Math.cos(t * 25 + mockPhase) * 0.2 * jitter + (Math.random() - 0.5) * 0.05) * ACCEL_LSB_PER_G);
+      az[i] = Math.round((1.0 + Math.sin(t * 15 + mockPhase) * 0.1 * jitter) * ACCEL_LSB_PER_G);
+      cur[i] = Math.max(0, Math.min(4095, Math.round(1800 + (servoState.paw.enabled ? 300 : 0) + Math.sin(t * 60) * 40 + (Math.random() - 0.5) * 30)));
+    }
+
+    mockTrajDrift.x += (Math.random() - 0.5) * 4;
+    mockTrajDrift.y += (Math.random() - 0.5) * 4;
+    mockTrajDrift.z += (Math.random() - 0.5) * 3;
+
+    return {
+      type: "window",
+      window_index: windowsReceived + 1,
+      sample_rate_hz: 1000,
+      ax_raw: ax, ay_raw: ay, az_raw: az,
+      acs712_adc_raw: cur,
+      // Home-relative, same convention as the real firmware (reset to 0,0,0
+      // at the last ZUPT) -- handleWindow() adds the FK home offset back in,
+      // so mock and real data both flow through the same conversion path.
+      est_x_mm: mockTrajDrift.x,
+      est_y_mm: mockTrajDrift.y,
+      est_z_mm: mockTrajDrift.z,
+    };
+  }
+
+  function mockStatusPayload(state) {
+    const positions = {};
+    AXIS_ORDER.forEach((name) => {
+      const s = servoState[name];
+      positions[name] = { ticks: s.ticks, pulse_us: s.us, enabled: s.enabled, min_us: s.minUs, max_us: s.maxUs, home_us: s.homeUs };
+    });
+    const mockTempC = 24 + Math.sin(mockPhase / 20) * 1.5 + (servoState.paw.enabled ? 0.4 : 0);
+    return {
+      type: "status", state,
+      gy91_ready: true, pca9685_ready: true, command_timeout_enabled: commandTimeoutEnabled,
+      streaming: !!mockTimer, sample_rate_hz: 1000,
+      servo_positions: positions,
+      imu_trajectory_ready: true, zupt_active: mockZuptActive,
+      ds18b20_ready: true, temp_c: mockTempC,
+    };
+  }
+
+  function startMock() {
+    AXIS_ORDER.forEach((name) => {
+      const s = servoState[name];
+      s.minUs = 635; s.maxUs = 3003;
+      s.homeUs = { swap: 1758, stretch: 1221, lift: 1221, paw: 2539 }[name];
+      s.us = s.homeUs; s.ticks = Math.round((s.us * PCA9685_TICKS_PER_PERIOD) / SERVO_PWM_PERIOD_US);
+      s.enabled = true;
+    });
+    buildServoSliders();
+    handleStatus(mockStatusPayload("ready"));
+    setStatus("mock", "模擬模式", "資料由前端產生，不是真實硬體");
+    setControlsConnected(false);
+    if (mockTimer) clearInterval(mockTimer);
+    mockTimer = setInterval(() => handleWindow(mockWindow()), 400);
+    startStatusPolling();
+  }
+
+  function stopMock() {
+    if (mockTimer) { clearInterval(mockTimer); mockTimer = null; }
+    stopStatusPolling();
+  }
+
+  els.mockToggle.addEventListener("change", () => {
+    if (els.mockToggle.checked) {
+      if (port) disconnect();
+      startMock();
+    } else {
+      stopMock();
+      setStatus("idle", "尚未連接", "點「連接裝置」選擇 ESP32-S3 的序列埠，或開「模擬模式」");
+      setControlsConnected(false);
+    }
+  });
+
+  // -----------------------------------------------------------------------
+  // H3 data collection: a fixed, scripted paw-closing sweep (same step size /
+  // interval / count every time) so the resulting current signature reflects
+  // what the gripper is closing on, not how long an operator happened to hold
+  // a button -- see WARROOM-2.0-PLAN.md "資料收集紀律". Two-phase button so
+  // the operator gets a pause, after `center`, to actually place the object
+  // before the scripted motion starts.
+  // -----------------------------------------------------------------------
+
+  function sleepMs(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function captureLog(text) {
+    const time = new Date().toLocaleTimeString("zh-TW", { hour12: false });
+    els.captureLog.textContent = `[${time}] ${text}\n` + els.captureLog.textContent;
+  }
+
+  function renderTrialCount() {
+    const counts = {};
+    collectedTrials.forEach((t) => { counts[t.label] = (counts[t.label] || 0) + 1; });
+    const summary = Object.entries(counts).map(([k, v]) => `${k}:${v}`).join("  ") || "（尚無資料）";
+    els.captureStatus.textContent = `已收集 ${collectedTrials.length} 筆 trial ——${summary}`;
+  }
+
+  async function runScriptedCloseSweep() {
+    const stepTicks = Number(els.captureStepTicks.value) || 40;
+    const intervalMs = Number(els.captureStepIntervalMs.value) || 150;
+    const stepCount = Number(els.captureStepCount.value) || 14;
+    for (let i = 0; i < stepCount; i++) {
+      sendCommand(`p+${stepTicks}`);
+      await sleepMs(intervalMs);
+    }
+  }
+
+  async function runCaptureTrial() {
+    if (capturePhase === "idle") {
+      capturePhase = "armed";
+      els.btnCaptureTrial.textContent = "物體放好後，點這裡開始擷取";
+      captureLog("送出 center，等待就定位…");
+      sendCommand("center");
+      await sleepMs(1500);
+      els.captureStatus.textContent = "已回到 home，放好這次要測的物體（或阻擋物/什麼都不放），準備好再點按鈕。";
+      return;
+    }
+    if (capturePhase !== "armed") return; // ignore clicks while a sweep is running
+
+    capturePhase = "running";
+    els.btnCaptureTrial.disabled = true;
+    els.btnCaptureTrial.textContent = "擷取中…";
+    const label = els.captureLabel.value;
+    const note = els.captureNote.value.trim();
+    captureLog(`開始擷取 trial：${label}${note ? " (" + note + ")" : ""}`);
+
+    activeTrialBuffer = { label, note, startedAt: new Date().toISOString(), windows: [] };
+    sendCommand("start");
+    await sleepMs(300); // let streaming actually begin before the sweep starts
+    await runScriptedCloseSweep();
+    await sleepMs(500); // capture a short settle tail after the last step
+    sendCommand("stop");
+    await sleepMs(200);
+    sendCommand("release");
+
+    const trial = activeTrialBuffer;
+    activeTrialBuffer = null;
+    if (trial.windows.length === 0) {
+      captureLog("⚠ 這筆 trial 沒有收到任何視窗（檢查是否真的連線/模擬中），已捨棄");
+    } else {
+      collectedTrials.push(trial);
+      captureLog(`✓ trial 完成，收到 ${trial.windows.length} 個視窗`);
+    }
+    renderTrialCount();
+
+    capturePhase = "idle";
+    els.btnCaptureTrial.disabled = false;
+    els.btnCaptureTrial.textContent = "執行固定夾持動作＋擷取這筆 trial";
+  }
+
+  function downloadDataset() {
+    if (collectedTrials.length === 0) {
+      captureLog("⚠ 還沒有任何 trial，沒有東西可以下載");
+      return;
+    }
+    const payload = {
+      exported_at: new Date().toISOString(),
+      sweep_params: {
+        step_ticks: Number(els.captureStepTicks.value),
+        step_interval_ms: Number(els.captureStepIntervalMs.value),
+        step_count: Number(els.captureStepCount.value),
+      },
+      trials: collectedTrials,
+    };
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `eep_gripper_dataset_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    captureLog(`已下載 ${collectedTrials.length} 筆 trial 的資料集`);
+  }
+
+  // -----------------------------------------------------------------------
+  // Wiring
+  // -----------------------------------------------------------------------
+
+  els.btnConnect.addEventListener("click", connect);
+  els.btnDisconnect.addEventListener("click", disconnect);
+  els.btnStart.addEventListener("click", () => sendCommand("start"));
+  els.btnStop.addEventListener("click", () => sendCommand("stop"));
+  els.btnQuery.addEventListener("click", () => {
+    if (els.mockToggle.checked) { handleStatus(mockStatusPayload("ready")); return; }
+    sendCommand("status");
+  });
+  els.btnCenter.addEventListener("click", () => {
+    if (els.mockToggle.checked) {
+      AXIS_ORDER.forEach((n) => { servoState[n].us = servoState[n].homeUs; servoState[n].enabled = true; updateServoRowDisplay(n); });
+      // Mock stand-in for a ZUPT reset (see mockWindow()'s comment): real
+      // firmware only resets on a genuine settle-and-still detection, this
+      // just approximates it on `center` for demo purposes.
+      mockTrajDrift = { x: 0, y: 0, z: 0 };
+      mockZuptActive = true;
+      trajectoryHistory.length = 0;
+      drawKinematics();
+      return;
+    }
+    sendCommand("center");
+  });
+  els.btnRelease.addEventListener("click", () => {
+    if (els.mockToggle.checked) {
+      AXIS_ORDER.forEach((n) => { servoState[n].enabled = false; updateServoRowDisplay(n); });
+      return;
+    }
+    sendCommand("release");
+  });
+  els.btnHold.addEventListener("click", () => {
+    if (els.mockToggle.checked) { commandTimeoutEnabled = false; updateTimeoutHint(); return; }
+    sendCommand("hold");
+  });
+  els.btnGuard.addEventListener("click", () => {
+    if (els.mockToggle.checked) { commandTimeoutEnabled = true; updateTimeoutHint(); return; }
+    sendCommand("guard");
+  });
+  els.btnShow.addEventListener("click", () => sendCommand("show"));
+
+  els.btnControlView.addEventListener("click", () => {
+    const entering = !document.body.classList.contains("control-only");
+    document.body.classList.toggle("control-only", entering);
+    els.btnControlView.textContent = entering ? "⬅ 返回儀表板" : "📱 獨立控制頁（適合手機）";
+  });
+
+  [els.kinLink1, els.kinLink2, els.kinLink3, els.kinUsPerDeg, els.invSwap, els.invStretch, els.invLift].forEach(
+    (input) => input.addEventListener("input", drawKinematics)
+  );
+
+  [els.ikX, els.ikY, els.ikZ].forEach((input) => input.addEventListener("input", moveToTarget));
+  els.btnIkFill.addEventListener("click", () => {
+    const { endpoint } = forwardKinematics();
+    els.ikX.value = Math.round(endpoint.x);
+    els.ikY.value = Math.round(endpoint.y);
+    els.ikZ.value = Math.round(endpoint.z);
+    els.ikXVal.textContent = els.ikX.value;
+    els.ikYVal.textContent = els.ikY.value;
+    els.ikZVal.textContent = els.ikZ.value;
+    els.ikStatus.textContent = "";
+  });
+  els.trajToggle.addEventListener("change", drawKinematics);
+  els.btnCaptureTrial.addEventListener("click", () => { runCaptureTrial(); });
+  els.btnDownloadDataset.addEventListener("click", downloadDataset);
+  renderTrialCount();
+
+  buildServoSliders();
+  updateTimeoutHint();
+  drawKinematics();
+
+  if ("serial" in navigator && window.isSecureContext) {
+    setControlsConnected(false);
+    navigator.serial.addEventListener("disconnect", () => {
+      logLine("⚠ 裝置已拔除");
+      setStatus("disconnected", "裝置已拔除", "請重新插上並點「連接裝置」");
+      setControlsConnected(false);
+    });
+  } else {
+    els.unsupported.style.display = "block";
+    els.btnConnect.disabled = true;
+  }
+})();
+</script>
+
+</body>
+</html>
