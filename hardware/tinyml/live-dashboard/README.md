@@ -2,6 +2,8 @@
 
 > 這個資料夾是「AI 生產異常戰情室」TinyML 硬體加碼展示的**額外現場展示工具**，完全獨立於 `src/` 下的離線評分 SPA——不共用程式碼、不共用建置流程、不影響 REQ-06 的離線可展示要求。用途是展示現場證明 ESP32-S3 量到的是真實硬體資料，不是模擬情境。
 
+> **⚠ 本文件以下內容(除「怎麼開」「常見失敗與預防」外)仍停留在 H0(單振動視窗)階段,`index.html` 實際已推進到 H1**:現有伺服滑桿控制、雙波形視窗(加速度／電流+溫度)、FK+IK 3D 運動學視窗(含 IMU 軌跡疊圖)、獨立手機控制頁、模擬資料模式、H3 標籤化資料蒐集面板(定步幅夾持試驗+下載匯出,已在模擬模式驗證過,尚未用真實硬體跑過)。完整功能與協定說明見權威來源 [`../WARROOM-2.0-PLAN.md`](../WARROOM-2.0-PLAN.md)「即時儀表板」節,快速上手見 [`../HANDOFF.md`](../HANDOFF.md)。
+
 ## 為什麼不能用 `file://` 雙擊開啟
 
 `index.html` 用 [Web Serial API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API) 直接連接 USB 序列埠。這個 API 要求 [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_contexts)，`file://` 是否算數由瀏覽器實作決定，不保證可用——**一定要透過本機伺服器用 `http://localhost` 開啟**，展示前務必先驗證過一次,不要臨場才發現打不開。
