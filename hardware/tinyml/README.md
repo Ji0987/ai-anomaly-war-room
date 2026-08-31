@@ -13,11 +13,16 @@ hardware/tinyml/
 ├─ firmware/tinyml_shadow_h0/tinyml_shadow_h0.ino
 ├─ tools/serial_capture.py
 ├─ tools/analyze_baseline.py
+├─ live-dashboard/          # 展示現場用的即時儀表板，見該資料夾 README.md
 ├─ requirements.txt
 └─ data/
    ├─ raw/                 # 本機擷取的 JSONL（不進版控）
    └─ analysis/            # 本機圖表（不進版控）
 ```
+
+## 展示現場即時儀表板
+
+`live-dashboard/` 是獨立於這份離線 SPA 評分交付的額外現場展示工具：瀏覽器透過 Web Serial API 直連 ESP32-S3，即時畫出振動波形與 RMS/peak-to-peak/crest factor，用來現場證明資料是真硬體量出來的，不是模擬情境。不共用、不影響 `src/` 的任何程式碼或建置流程。用法見 [`live-dashboard/README.md`](live-dashboard/README.md)。
 
 ## 接線與供電
 
