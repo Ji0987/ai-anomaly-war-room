@@ -5,3 +5,11 @@ dist-offline/
 .env
 .env.*
 .DS_Store
+
+# TinyML Shadow PoC：個人實測資料與產出圖表保留在本機，目錄結構仍以 .gitkeep 追蹤。
+/hardware/tinyml/data/raw/*
+!/hardware/tinyml/data/raw/.gitkeep
+/hardware/tinyml/data/analysis/*
+!/hardware/tinyml/data/analysis/.gitkeep
+__pycache__/
+*.pyc
