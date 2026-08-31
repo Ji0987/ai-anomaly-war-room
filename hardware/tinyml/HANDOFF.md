@@ -4,7 +4,7 @@
 
 ## 這是什麼、跟主線的關係
 
-「AI 生產異常戰情室」是暑期營課程的正式評分交付：`ai-anomaly-war-room` repo 的 `src/`，一個完全離線的網頁 demo。這個 `ai-anomaly-war-room-tinyml` 目錄是另外用 git worktree 切出來的**個人加碼展示**，跟評分交付完全分開（不同分支），**不碰 `src/`、`docs/`、`.github/`**。目標是對外提交（細節見團隊內部文件，不放在此 repo）。
+「AI 生產異常戰情室」的正式評分交付是 `src/` 底下這個完全離線的網頁 demo。`hardware/tinyml/` 這個目錄原本是另外用 git worktree 切出來的**個人加碼展示**，2026-09-01 已合併進 `dev`/`main`，跟網頁 demo 並存在同一個 repo 裡（worktree 已移除，現在單一工作目錄即可看到兩邊）。這條線本身仍不動 `src/`、`docs/`、`.github/` 既有內容。
 
 ## 現在的題目（一句話）
 

@@ -25,6 +25,10 @@ npm run build:offline  # 單檔 dist-offline/index.html,可離線雙擊開啟(�
 topbar 右側「情境」下拉可切換 5 種內建情境(確診異常/正常巡檢/感測缺值/疑似誤報/重複告警抑制),
 不是只有一個戲劇化的成功案例,見 [docs/data-model.md](docs/data-model.md#情境庫不是只有一個戲劇化的成功案例)。
 
+## 硬體加碼展示
+
+[hardware/tinyml/](hardware/tinyml/) 是獨立於上述離線 SPA 的個人硬體加碼展示:用真實 ESP32-S3 + MeArm 夾爪做電流限制式自適應夾持(迴歸)與過載卡料偵測(分類),含即時儀表板(Web Serial 直連、正逆向運動學、IMU 軌跡疊圖)。跟評分交付並存、不影響 `src/`,快速上手見 [hardware/tinyml/HANDOFF.md](hardware/tinyml/HANDOFF.md)。
+
 ## 協作規範(對應課程評分表)
 
 - 分支流程:`feature/* → dev → main`;`main`/`dev` 禁止直接 push

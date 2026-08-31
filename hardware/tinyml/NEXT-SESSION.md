@@ -67,5 +67,5 @@ python hardware/tinyml/tools/analyze_baseline.py --files hardware/tinyml/data/ra
 ## 這條線的邊界(提醒新 session 不要越界)
 
 - 不要碰 `src/`、`docs/`、`.github/`、`package.json` 等主線檔案
-- 不要開 PR 併入 `dev`——這是個人加碼展示,要不要正式併入是使用者的決定,不是工程判斷
+- 這條線已於 2026-09-01 合併進 `dev`/`main`(worktree 已移除),之後的變更直接在 `hardware/tinyml/` 底下修改、跟主線一起走即可,不需要再另開分支
 - 如果做出真實資料,最後只匯出成一份新的 `event-XXX.json` 靜態情境檔餵給現有 SPA(如果使用者決定要整合的話),不要做即時序列連線或修改 SPA 的離線架構
