@@ -27,7 +27,7 @@ topbar 右側「情境」下拉可切換 5 種內建情境(確診異常/正常�
 
 ## 硬體加碼展示
 
-[hardware/tinyml/](hardware/tinyml/) 是獨立於上述離線 SPA 的個人硬體加碼展示:用真實 ESP32-S3 + MeArm 夾爪做電流限制式自適應夾持(迴歸)與過載卡料偵測(分類),含即時儀表板(Web Serial 直連、正逆向運動學、IMU 軌跡疊圖)。跟評分交付並存、不影響 `src/`,快速上手見 [hardware/tinyml/HANDOFF.md](hardware/tinyml/HANDOFF.md)。
+[hardware/tinyml/](hardware/tinyml/) 是獨立於上述離線 SPA 的個人硬體加碼展示:用真實 ESP32-S3 + MeArm 夾爪做過載卡料即時偵測(分類,決策樹已上韌體、偵測到過載會自動安全釋放)與電流限制式自適應夾持(迴歸,規劃中);含即時儀表板(Web Serial 直連、伺服控制、電流/溫度趨勢)。跟評分交付並存、不影響 `src/`,快速上手見 [hardware/tinyml/HANDOFF.md](hardware/tinyml/HANDOFF.md)。
 
 ## 協作規範(對應課程評分表)
 
