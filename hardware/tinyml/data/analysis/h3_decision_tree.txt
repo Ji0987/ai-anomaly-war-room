@@ -1,0 +1,10 @@
+|--- delta_mean <= 16.04
+|   |--- class: NO_CONTACT
+|--- delta_mean >  16.04
+|   |--- last_mean <= 2086.10
+|   |   |--- class: NORMAL_GRIP
+|   |--- last_mean >  2086.10
+|   |   |--- last_std <= 12.77
+|   |   |   |--- class: OVERLOAD_JAM
+|   |   |--- last_std >  12.77
+|   |   |   |--- class: NORMAL_GRIP
