@@ -32,10 +32,10 @@
 
   Design notes:
   - Serial commands are newline-delimited: start, stop, status, show, jog,
-    center / home, release, hold, and guard.  jog also accepts the short
+    center / home, release, hold, guard, and ack.  jog also accepts the short
     s/t/l/p +/-N form from Servo_Calibration_Tool.ino (e.g. "l-25" jogs lift
     by -25 ticks).  start/stop/status/error output stays line-delimited JSON
-    per the H0 convention; show/jog/center/release/hold/guard print short
+    per the H0 convention; show/jog/center/release/hold/guard/ack print short
     human-readable lines instead, since those are interactive calibration
     commands, not data a capture script needs to parse.
   - Sampling uses micros() and an advancing deadline.  No application-level
@@ -48,6 +48,13 @@
     every fresh boot starts with the timeout armed regardless of the previous
     session's state.  This keeps uncalibrated hardware safe by default while
     still proving the PCA9685 API, I2C bus, ADC, GY-91, and telemetry path.
+  - Priority between manual control and the safety classifier: an on-device
+    OVERLOAD_JAM detection (see classifyGripEvent()) auto-releases the paw AND
+    sets a latch that makes jog/center fail with an explicit error until `ack`
+    is sent. This is deliberate -- without it, a slider still being dragged
+    (or a scripted H3 sweep's next `center`) when the jam fires would silently
+    re-engage the very axis that was just released for safety, so the auto-
+    release "wins" until a human (or the calling script) explicitly clears it.
 */
 
 #include <Arduino.h>
@@ -55,6 +62,9 @@
 #include <Adafruit_PWMServoDriver.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+
+// Keep custom types before Arduino's auto-generated function prototypes.
+enum class GripClassification : uint8_t { NORMAL_GRIP, OVERLOAD_JAM, NO_CONTACT };
 
 constexpr uint8_t MPU_ADDRESS = 0x68;
 constexpr uint8_t PCA9685_ADDRESS = 0x40;
@@ -74,7 +84,7 @@ constexpr float GYRO_LSB_PER_DPS = 65.5f;
 // ACCEL_CONFIG below uses FS_SEL = 1 (+/-4 g), whose scale is 8192 LSB/g.
 constexpr float ACCEL_LSB_PER_G = 8192.0f;
 constexpr float GRAVITY_MPS2 = 9.80665f;
-constexpr float DEG_TO_RAD = 0.01745329251994329577f;
+constexpr float RADIANS_PER_DEGREE = 0.01745329251994329577f;
 
 constexpr int I2C_SDA_PIN = 8;
 constexpr int I2C_SCL_PIN = 9;
@@ -159,6 +169,16 @@ int16_t gyRaw[WINDOW_SAMPLES];
 int16_t gzRaw[WINDOW_SAMPLES];
 uint16_t acs712Raw[WINDOW_SAMPLES];
 
+// Real-time grip-event classifier state: tracks the ACS712 window mean at the
+// START and the most recent window's mean/stddev during a start..stop
+// streaming session, reset each time startStreaming() runs. See
+// classifyGripEvent() below for the trained thresholds and their provenance.
+bool classifierHasFirstWindow = false;
+uint32_t classifierWindowCount = 0;
+float classifierFirstMeanRaw = 0.0f;
+float classifierLastMeanRaw = 0.0f;
+float classifierLastStdRaw = 0.0f;
+
 bool imuReady = false;
 bool pca9685Ready = false;
 bool ds18b20Ready = false;
@@ -168,6 +188,14 @@ bool servoOutputsEnabled = false;
 // `guard` turns it back on. This state is never persisted across a reset, on
 // purpose -- every new session starts safe and must opt out explicitly.
 bool commandTimeoutEnabled = true;
+// Priority rule between manual servo control and the classifier's safety
+// release: an OVERLOAD_JAM auto-release sets this latch, and jog/center are
+// refused (not silently overridden) until the operator explicitly sends
+// `ack` -- otherwise a slider still being dragged when the jam fires would
+// immediately re-enable the very axis that was just released for safety,
+// defeating the auto-release. `release`/`status`/`show`/`hold`/`guard` are
+// unaffected: they do not re-engage motion, only jog/center do.
+bool overloadLatchActive = false;
 bool streaming = false;
 bool imuTrajectoryReady = false;
 bool zuptActive = false;
@@ -290,7 +318,7 @@ void armZuptHomeReset() {
 float swapYawRadians() {
   const float swapPulseUs = static_cast<float>(pca9685TicksToPulseUs(servoOutputTicks[0]));
   const float yawDeg = SWAP_YAW_SIGN * (swapPulseUs - SERVO_HOME_US[0]) / SWAP_US_PER_DEG;
-  return yawDeg * DEG_TO_RAD;
+  return yawDeg * RADIANS_PER_DEGREE;
 }
 
 void resetZuptStationaryWindow() {
@@ -387,9 +415,9 @@ void updateImuTrajectory(uint32_t captureUs, int16_t ax, int16_t ay, int16_t az,
   lastTrajectorySampleUs = captureUs;
 
   if (dtSeconds > 0.0f && dtSeconds <= 0.020f) {
-    const float gxRadPerSec = (gyroXDps - gyroBiasXDps) * DEG_TO_RAD;
-    const float gyRadPerSec = (gyroYDps - gyroBiasYDps) * DEG_TO_RAD;
-    const float gzRadPerSec = (gyroZDps - gyroBiasZDps) * DEG_TO_RAD;
+    const float gxRadPerSec = (gyroXDps - gyroBiasXDps) * RADIANS_PER_DEGREE;
+    const float gyRadPerSec = (gyroYDps - gyroBiasYDps) * RADIANS_PER_DEGREE;
+    const float gzRadPerSec = (gyroZDps - gyroBiasZDps) * RADIANS_PER_DEGREE;
     const float sinRoll = sinf(rollRad);
     const float cosRoll = cosf(rollRad);
     const float rollFromGyro =
@@ -446,6 +474,93 @@ void pollDs18b20() {
     lastTempC = reading;
   }
   dsConversionPending = false;  // immediately eligible to start the next conversion
+}
+
+// Real-time grip-event classifier: NORMAL_GRIP / OVERLOAD_JAM / NO_CONTACT
+// from the ACS712 window trend during one start..stop streaming session.
+//
+// Decision tree trained 2026-09-06 on 30 H3 trials (10 each label; two eraser
+// sizes for NORMAL_GRIP, an oversized blocker for OVERLOAD_JAM, empty paw for
+// NO_CONTACT) via tools/train_h3_classifier.py, leave-one-out cross-validated
+// accuracy 80% (per-class recall: NORMAL_GRIP 90%, NO_CONTACT 90%,
+// OVERLOAD_JAM 60%). The two features that mattered were the CHANGE in mean
+// current from the first to the last streamed window (delta_mean -- flat if
+// nothing is contacted, rising if the paw closes on something) and the last
+// window's absolute mean/ripple (a stalled/jammed motor draws more current
+// with less ripple than one still smoothly closing). See
+// data/analysis/h3_decision_tree.txt for the exported tree and
+// WARROOM-2.0-PLAN.md for the dataset description.
+//
+// The threshold constants below are this specific rig's raw ADC counts at
+// capture time (ACS712 divider/zero-point uncalibrated, ambient-dependent) --
+// they are fitted data, not universal constants. Re-run the training tool
+// against a fresh dataset and update these four numbers if the sensor,
+// divider, or ambient noise floor changes appreciably.
+constexpr float CLASSIFIER_DELTA_MEAN_THRESHOLD = 16.04f;
+constexpr float CLASSIFIER_LAST_MEAN_THRESHOLD = 2086.10f;
+constexpr float CLASSIFIER_LAST_STD_THRESHOLD = 12.77f;
+
+const char *gripClassificationName(GripClassification classification) {
+  switch (classification) {
+    case GripClassification::OVERLOAD_JAM:
+      return "OVERLOAD_JAM";
+    case GripClassification::NO_CONTACT:
+      return "NO_CONTACT";
+    default:
+      return "NORMAL_GRIP";
+  }
+}
+
+GripClassification classifyGripEvent(float deltaMeanRaw, float lastMeanRaw, float lastStdRaw) {
+  if (deltaMeanRaw <= CLASSIFIER_DELTA_MEAN_THRESHOLD) {
+    return GripClassification::NO_CONTACT;
+  }
+  if (lastMeanRaw <= CLASSIFIER_LAST_MEAN_THRESHOLD) {
+    return GripClassification::NORMAL_GRIP;
+  }
+  return lastStdRaw <= CLASSIFIER_LAST_STD_THRESHOLD ? GripClassification::OVERLOAD_JAM
+                                                      : GripClassification::NORMAL_GRIP;
+}
+
+// Reduces one just-completed ACS712 window to mean/stddev and folds it into
+// this session's first/last window stats. Called from loop() right after a
+// window fills, before its samples are overwritten by the next window.
+void updateGripClassifierStats() {
+  float sum = 0.0f;
+  for (size_t i = 0; i < WINDOW_SAMPLES; ++i) {
+    sum += static_cast<float>(acs712Raw[i]);
+  }
+  const float mean = sum / static_cast<float>(WINDOW_SAMPLES);
+
+  float sumSquaredDiff = 0.0f;
+  for (size_t i = 0; i < WINDOW_SAMPLES; ++i) {
+    const float diff = static_cast<float>(acs712Raw[i]) - mean;
+    sumSquaredDiff += diff * diff;
+  }
+  const float stddev = sqrtf(sumSquaredDiff / static_cast<float>(WINDOW_SAMPLES));
+
+  if (!classifierHasFirstWindow) {
+    classifierFirstMeanRaw = mean;
+    classifierHasFirstWindow = true;
+  }
+  classifierLastMeanRaw = mean;
+  classifierLastStdRaw = stddev;
+  ++classifierWindowCount;
+}
+
+void sendClassification(GripClassification result, float firstMeanRaw, float lastMeanRaw,
+                         float deltaMeanRaw, float lastStdRaw) {
+  Serial.print(F("{\"type\":\"classification\",\"label\":\""));
+  Serial.print(gripClassificationName(result));
+  Serial.print(F("\",\"first_mean_raw\":"));
+  Serial.print(firstMeanRaw, 2);
+  Serial.print(F(",\"last_mean_raw\":"));
+  Serial.print(lastMeanRaw, 2);
+  Serial.print(F(",\"delta_mean_raw\":"));
+  Serial.print(deltaMeanRaw, 2);
+  Serial.print(F(",\"last_std_raw\":"));
+  Serial.print(lastStdRaw, 2);
+  Serial.println(F("}"));
 }
 
 void sendStatus(const char *state);
@@ -601,6 +716,8 @@ void sendStatus(const char *state) {
   Serial.print(servoOutputsEnabled ? F("true") : F("false"));
   Serial.print(F(",\"command_timeout_enabled\":"));
   Serial.print(commandTimeoutEnabled ? F("true") : F("false"));
+  Serial.print(F(",\"overload_latch_active\":"));
+  Serial.print(overloadLatchActive ? F("true") : F("false"));
   Serial.print(F(",\"servo_channels\":{\"swap\":"));
   Serial.print(SERVO_CHANNEL_SWAP);
   Serial.print(F(",\"stretch\":"));
@@ -751,14 +868,23 @@ void sendWindow(float actualSampleRateHz) {
 }
 
 void startStreaming() {
-  if (!imuReady) {
-    sendError("gy91_not_ready");
+  // Streaming's real purpose for H3 is the ACS712 current window, which does
+  // not depend on GY-91 at all. Requiring imuReady here (as H0/H1 always did)
+  // means a GY-91 hardware fault -- wiring, a dead chip, anything -- blocks
+  // current-data collection too, even though the two are unrelated sensors on
+  // the same loop. If GY-91 is not ready, accel/gyro reads are skipped below
+  // (not attempted, not faked) and ax/ay/az/gx/gy/gz simply stay at their
+  // zero-initialized values in every window; ACS712 keeps sampling for real.
+  if (!imuReady && !pca9685Ready) {
+    sendError("no_sensors_ready");
     return;
   }
   sampleCount = 0;
   lastTrajectorySampleUs = 0;
   streaming = true;
   nextSampleUs = micros();
+  classifierHasFirstWindow = false;
+  classifierWindowCount = 0;
   sendStatus("streaming");
 }
 
@@ -766,6 +892,21 @@ void stopStreaming() {
   streaming = false;
   sampleCount = 0;  // A partial window is intentionally not emitted.
   sendStatus("stopped");
+
+  // Classifying needs a first-vs-last window contrast; a session that ended
+  // before two full windows streamed does not have one, so it is skipped
+  // rather than reported on stale/zeroed stats.
+  if (classifierWindowCount >= 2) {
+    const float deltaMeanRaw = classifierLastMeanRaw - classifierFirstMeanRaw;
+    const GripClassification result =
+        classifyGripEvent(deltaMeanRaw, classifierLastMeanRaw, classifierLastStdRaw);
+    sendClassification(result, classifierFirstMeanRaw, classifierLastMeanRaw, deltaMeanRaw,
+                        classifierLastStdRaw);
+    if (result == GripClassification::OVERLOAD_JAM && releaseServoOutputs()) {
+      overloadLatchActive = true;
+      sendStatus("auto_released_overload_jam");
+    }
+  }
 }
 
 // Parses the short jog syntax shared with Servo_Calibration_Tool.ino, e.g.
@@ -779,6 +920,10 @@ bool tryHandleShortJog(const char *command) {
   }
   if (command[1] != '+' && command[1] != '-') {
     return false;
+  }
+  if (overloadLatchActive) {
+    sendError("overload_latch_active_send_ack_first");
+    return true;
   }
 
   char *end = nullptr;
@@ -804,7 +949,11 @@ void handleCommand(const char *command) {
   } else if (strcmp(command, "stop") == 0) {
     stopStreaming();
   } else if (strcmp(command, "status") == 0) {
-    sendStatus(imuReady && pca9685Ready ? "ready" : "hardware_init_degraded");
+    // GY-91 is known-offline hardware (descoped, see file header) and must not
+    // make the whole board report "degraded" forever -- PCA9685 is the only
+    // subsystem core functionality (servo control, ACS712 streaming, the H3
+    // classifier) actually depends on. Matches startStreaming()'s same call.
+    sendStatus(pca9685Ready ? "ready" : "hardware_init_degraded");
   } else if (strcmp(command, "show") == 0) {
     printAllServoPositions();
   } else if (strcmp(command, "hold") == 0) {
@@ -815,7 +964,18 @@ void handleCommand(const char *command) {
     commandTimeoutEnabled = true;
     recordServoCommand();
     Serial.println(F("OK auto-release timeout ARMED"));
+  } else if (strcmp(command, "ack") == 0) {
+    if (overloadLatchActive) {
+      overloadLatchActive = false;
+      Serial.println(F("OK overload latch cleared -- jog/center re-armed"));
+    } else {
+      Serial.println(F("OK no overload latch was active"));
+    }
   } else if (strcmp(command, "center") == 0 || strcmp(command, "home") == 0) {
+    if (overloadLatchActive) {
+      sendError("overload_latch_active_send_ack_first");
+      return;
+    }
     if (!centerServoOutputs()) {
       sendError("servo_center_failed");
       return;
@@ -831,6 +991,10 @@ void handleCommand(const char *command) {
     recordServoCommand();
     printAllServoPositions();
   } else if (strncmp(command, "jog:", 4) == 0) {
+    if (overloadLatchActive) {
+      sendError("overload_latch_active_send_ack_first");
+      return;
+    }
     const char *channelName = command + 4;
     const char *separator = strchr(channelName, ':');
     if (separator == nullptr) {
@@ -929,7 +1093,9 @@ void setup() {
   ds18b20Ready = ds18b20.getDeviceCount() > 0;  // optional hardware; false if none wired.
   if (ds18b20Ready) ds18b20.setWaitForConversion(false);  // this file drives the timing itself.
 
-  sendStatus(imuReady && pca9685Ready ? "ready" : "hardware_init_degraded");
+  // Same reasoning as the `status` command handler above: GY-91 is known-
+  // offline/descoped, PCA9685 is the only subsystem "ready" should gate on.
+  sendStatus(pca9685Ready ? "ready" : "hardware_init_degraded");
 }
 
 void loop() {
@@ -945,22 +1111,29 @@ void loop() {
     return;
   }
 
-  int16_t ax;
-  int16_t ay;
-  int16_t az;
-  if (!readAccelerationRaw(&ax, &ay, &az)) {
-    streaming = false;
-    sampleCount = 0;
-    releaseServoOutputs();
-    sendError("accelerometer_read_failed");
-    sendStatus("stopped_after_i2c_error");
-    return;
-  }
-
+  int16_t ax = 0;
+  int16_t ay = 0;
+  int16_t az = 0;
   int16_t gx = 0;
   int16_t gy = 0;
   int16_t gz = 0;
-  const bool gyroReadOk = readGyroscopeRaw(&gx, &gy, &gz);
+  bool gyroReadOk = false;
+  // Only attempt the IMU at all if setup() actually found it. Streaming can
+  // now be pca9685-only (see startStreaming()), so this is not a transient
+  // fault -- it is the expected, permanent state for a run with GY-91 not
+  // wired/working, and it must not stop the ACS712 capture that run exists
+  // for. ax/ay/az/gx/gy/gz simply stay 0 in every window sent this way.
+  if (imuReady) {
+    if (!readAccelerationRaw(&ax, &ay, &az)) {
+      streaming = false;
+      sampleCount = 0;
+      releaseServoOutputs();
+      sendError("accelerometer_read_failed");
+      sendStatus("stopped_after_i2c_error");
+      return;
+    }
+    gyroReadOk = readGyroscopeRaw(&gx, &gy, &gz);
+  }
   // Gyro data is telemetry only. A transient gyro read fault must not change
   // the existing accel-fault safety path or command any servo output; retain
   // the 1 kHz accel/current capture and mark trajectory output not-ready.
@@ -987,6 +1160,7 @@ void loop() {
     const float actualSampleRateHz = elapsedUs > 0
         ? (1000000.0f * static_cast<float>(WINDOW_SAMPLES - 1) / static_cast<float>(elapsedUs))
         : 0.0f;
+    updateGripClassifierStats();  // must run before sendWindow(); both read acs712Raw for this window.
     sendWindow(actualSampleRateHz);
     sampleCount = 0;
     // JSON serialization at 115200 baud is much slower than a 1 kHz capture.
